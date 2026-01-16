@@ -3,7 +3,6 @@ import { movementService } from '../services/movementService';
 import type { FinancialMovement, MovementType } from '../../../core/types/domain';
 
 interface UseMovementsProps {
-  userId?: number;
   filters?: {
     tipo?: MovementType;
     fechaInicio?: string;
@@ -12,7 +11,7 @@ interface UseMovementsProps {
   };
 }
 
-export const useMovements = ({ userId, filters }: UseMovementsProps) => {
+export const useMovements = ({ filters }: UseMovementsProps = {}) => {
   const [movements, setMovements] = useState<FinancialMovement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,18 +20,13 @@ export const useMovements = ({ userId, filters }: UseMovementsProps) => {
   const filtersKey = JSON.stringify(filters ?? {});
 
   const fetchMovements = useCallback(async () => {
-    if (!userId) {
-      setLoading(false);
-      return;
-    }
-
     try {
       setLoading(true);
       setError(null);
       // Parseamos la key para no depender de la referencia del objeto filters
       const currentFilters = JSON.parse(filtersKey);
       
-      const data = await movementService.getAllByUserId(userId, currentFilters);
+      const data = await movementService.getAll(currentFilters);
       setMovements(data);
     } catch (err) {
       setError('Error al cargar movimientos');
@@ -40,15 +34,11 @@ export const useMovements = ({ userId, filters }: UseMovementsProps) => {
     } finally {
       setLoading(false);
     }
-    // Eliminamos 'filters' de las dependencias para evitar loops infinitos por cambios de referencia
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, filtersKey]);
+  }, [filtersKey]);
 
   useEffect(() => {
-    if (userId) {
-      fetchMovements();
-    }
-  }, [fetchMovements, userId]);
+    fetchMovements();
+  }, [fetchMovements]);
 
   return { movements, loading, error, refetch: fetchMovements };
 };

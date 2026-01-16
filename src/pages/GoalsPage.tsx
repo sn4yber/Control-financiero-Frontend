@@ -5,17 +5,23 @@ import { CreateGoalModal } from '../features/goals/components/CreateGoalModal';
 import { Target, Plus, Loader2, Trophy, Clock, TrendingUp, Trash2 } from 'lucide-react';
 
 export const GoalsPage = () => {
-  const userIdStr = localStorage.getItem('userId');
-  const userId = userIdStr ? parseInt(userIdStr) : undefined;
-
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { goals, loading, error, refetch } = useGoals(userId);
+  const { goals, loading, error, refetch } = useGoals();
   const { deleteGoal, loading: deleting } = useDeleteGoal();
 
   const handleDelete = async (id: number) => {
     if (window.confirm('¿Estás seguro de eliminar esta meta?')) {
-      await deleteGoal(id);
-      refetch();
+      try {
+        await deleteGoal(id);
+        refetch();
+      } catch (error: any) {
+        console.error('Error deleting goal:', error);
+        if (error.response && error.response.status === 409) {
+           alert('No se puede eliminar esta meta porque tiene movimientos asociados.');
+        } else {
+           alert('Hubo un error al eliminar la meta.');
+        }
+      }
     }
   };
 

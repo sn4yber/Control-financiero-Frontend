@@ -8,6 +8,7 @@ import { TransactionsPage } from './pages/TransactionsPage';
 import { GoalsPage } from './pages/GoalsPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { BudgetsPage } from './pages/BudgetsPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { ProtectedRoute } from './features/auth/components/ProtectedRoute';
 
 function App() {
@@ -30,7 +31,7 @@ function App() {
             
             <Route path="/budgets" element={<BudgetsPage />} />
             <Route path="/reports" element={<ReportsPage />} />
-            <Route path="/reports" element={<div className="p-4">Reports Page (WIP)</div>} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Route>
         </Route>
 

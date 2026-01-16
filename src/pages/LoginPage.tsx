@@ -7,20 +7,15 @@ export const LoginPage = () => {
   const [usernameInput, setUsernameInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const { login, loading, error } = useAuth();
-  const [inputError, setInputError] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setInputError(null);
-
-    // Login exclusivo por ID debido a limitación de API
-    const possibleId = parseInt(usernameInput);
-
-    if (!isNaN(possibleId)) {
-       login(possibleId);
-    } else {
-       setInputError('Limitación temporal de API: Por favor ingresa tu ID numérico (ej: 4).');
-    }
+    // Enviamos siempre como 'username' ya que el backend probablemente 
+    // use este campo para buscar por usuario O email.
+    login({ 
+      username: usernameInput,
+      password: passwordInput 
+    });
   };
 
   return (
@@ -28,50 +23,48 @@ export const LoginPage = () => {
       <div className="text-center lg:text-left">
         <h1 className="text-3xl font-bold text-gray-900">Iniciar Sesión</h1>
         <p className="mt-2 text-gray-500">
-            <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-bold uppercase tracking-wide">Modo Desarrollo</span>
-            <span className="block mt-1">Ingresa tu ID de usuario para probar.</span>
+            Bienvenido de nuevo. Ingresas tus credenciales.
         </p>
       </div>
 
       <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
         <div className="space-y-4">
-          {/* ID Input */}
+          {/* Username Input */}
           <div>
-            <label htmlFor="userId" className="block text-sm font-medium text-gray-700">
-               ID de Usuario
+            <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+               Usuario / Email
             </label>
             <div className="mt-1 relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
                 <User size={20} />
               </div>
               <input
-                id="userId"
-                name="userId"
-                type="number" 
+                id="username"
+                name="username"
+                type="text" 
                 required
                 value={usernameInput}
                 onChange={(e) => setUsernameInput(e.target.value)}
                 className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                placeholder="Ej: 4"
+                placeholder="Ingresa tu usuario"
               />
             </div>
-            <p className="mt-1 text-xs text-gray-500">
-               * Usa el ID que recibiste al registrarte (ej: 4).
-            </p>
           </div>
 
-           {/* Password Input (Simulado por ahora) */}
-           <div>
-            <label htmlFor="pass" className="block text-sm font-medium text-gray-700">
-              Contraseña
+          {/* Password Input */}
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+               Contraseña
             </label>
             <div className="mt-1 relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
                 <Lock size={20} />
               </div>
               <input
-                id="pass"
-                type="password"
+                id="password"
+                name="password"
+                type="password" 
+                required
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
                 className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
@@ -81,9 +74,9 @@ export const LoginPage = () => {
           </div>
         </div>
 
-        {(error || inputError) && (
+        {error && (
             <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg">
-                {error || inputError}
+                {error}
             </div>
         )}
 

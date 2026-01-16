@@ -1,85 +1,65 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authService } from '../services/authService';
+import { authService, type LoginDTO } from '../services/authService';
 
 export const useAuth = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const login = async (identifier: number | string) => {
+  const login = async (credentials: LoginDTO) => {
     try {
       setLoading(true);
       setError(null);
-      let user;
 
-      // Según la documentación de la API entregada:
-      // Solo existen endpoints: POST /usuarios y GET /usuarios/{id}
-      // NO hay endpoint para buscar por email/username.
+      const response = await authService.login(credentials);
       
-      if (typeof identifier === 'string') {
-          // Intentamos convertir a numero por si el usuario metió "123" como texto
-          const parsedId = parseInt(identifier);
-          if (!isNaN(parsedId)) {
-               user = await authService.getById(parsedId);
-          } else {
-             // Si es texto real (ej: "pepito@mail.com"), fallamos rápido.
-             throw new Error('La API actual solo soporta ingreso por ID Numérico. Por favor usa el ID que obtuviste al registrarte.');
-          }
-      } else {
-          user = await authService.getById(identifier);
+      // Save session
+      localStorage.setItem('token', response.token);
+      if (response.user) {
+        localStorage.setItem('user', JSON.stringify(response.user));
       }
       
-      // Guardamos sesión simple
-      localStorage.setItem('userId', user.id.toString());
-      localStorage.setItem('user', JSON.stringify(user));
-      
-      navigate('/'); // Redirigir al dashboard
+      navigate('/'); 
     } catch (err: any) {
-      const msg = err.message || 'Error desconocido';
-      if (msg.includes('solo soporta ingreso por ID')) {
-         setError(msg);
-      } else {
-         setError('No pudimos encontrar un usuario con ese ID. Verifica tus datos.');
-      }
       console.error(err);
+      if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else if (err.response && err.response.status === 401) {
+          setError('Credenciales incorrectas. Verifica tu usuario y contraseña.');
+      } else {
+          setError('Error al iniciar sesión. Verifica tu conexión.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Definimos el tipo localmente o lo importamos si se usa en service
-  interface RegisterData {
-    username: string;
-    email: string;
-    fullName: string;
-    password?: string;
-  }
-
-  const register = async (data: RegisterData) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const newUser = await authService.register(data);
-      
-      // Auto-login al registrar
-      localStorage.setItem('userId', newUser.id.toString());
-      localStorage.setItem('user', JSON.stringify(newUser));
-      
-      navigate('/');
-    } catch (err) {
-      setError('Error al registrar usuario. Intenta con otro email/username.');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+  const register = async (data: any) => {
+      try {
+          setLoading(true);
+          setError(null);
+          const response = await authService.register(data);
+           localStorage.setItem('token', response.token);
+           if (response.user) {
+              localStorage.setItem('user', JSON.stringify(response.user));
+           }
+          navigate('/');
+      } catch (err: any) {
+          console.error(err);
+           if (err.response && err.response.status === 409) {
+             setError('El nombre de usuario o email ya existe.');
+           } else {
+             setError('Error al registrar usuario.');
+           }
+      } finally {
+          setLoading(false);
+      }
   };
 
   const logout = () => {
-    localStorage.removeItem('userId');
-    localStorage.removeItem('user');
-    localStorage.removeItem('token'); // Aseguramos borrar token si existiera
-    navigate('/login');
+      authService.logout();
+      navigate('/login');
   };
 
   return { login, register, logout, loading, error };

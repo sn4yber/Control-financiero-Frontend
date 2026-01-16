@@ -2,7 +2,6 @@ import { apiClient } from '../../../core/api/client';
 import type { FinancialMovement, MovementType } from '../../../core/types/domain';
 
 export interface CreateMovementDTO {
-  usuarioId: number;
   tipoMovimiento: MovementType;
   monto: number;
   descripcion: string;
@@ -30,19 +29,9 @@ export const movementService = {
   delete: async (id: number): Promise<void> => {
     await apiClient.delete(`/movimientos/${id}`);
   },
-  getAllByUserId: async (userId: number, filters: MovementFilters = {}): Promise<FinancialMovement[]> => {
-    const params = new URLSearchParams();
-    
-    if (filters.tipo) params.append('tipo', filters.tipo);
-    if (filters.fechaInicio) params.append('fechaInicio', filters.fechaInicio);
-    if (filters.fechaFin) params.append('fechaFin', filters.fechaFin);
-    if (filters.categoriaId) params.append('categoriaId', filters.categoriaId.toString());
-
-    // Nota: Axios maneja los params automáticamente, pero como el backend espera query params específicos
-    // podemos pasarlos como segundo argumento en { params: filters }
-    // Sin embargo, para mayor control y seguir la documentación, usaremos el objeto config de axios.
-    
-    const response = await apiClient.get<FinancialMovement[]>(`/movimientos/usuario/${userId}`, {
+  getAll: async (filters: MovementFilters = {}): Promise<FinancialMovement[]> => {
+    // Axios params automatically handles object to query string
+    const response = await apiClient.get<FinancialMovement[]>('/movimientos', {
       params: filters
     });
     return response.data;

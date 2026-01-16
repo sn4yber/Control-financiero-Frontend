@@ -19,15 +19,15 @@ export const useChartData = (movements: FinancialMovement[]) => {
 
     // 2. Aggregate data
     movements.forEach(m => {
-      const mDate = new Date(m.fecha);
+      const mDate = new Date(m.fechaMovimiento);
       const monthIndex = months.findIndex(month => 
         month.date.getMonth() === mDate.getMonth() && 
         month.date.getFullYear() === mDate.getFullYear()
       );
 
       if (monthIndex !== -1) {
-        if (m.tipo === 'INCOME') months[monthIndex].income += m.monto;
-        if (m.tipo === 'EXPENSE') months[monthIndex].expense += m.monto;
+        if (m.tipoMovimiento === 'INCOME') months[monthIndex].income += m.monto;
+        if (m.tipoMovimiento === 'EXPENSE') months[monthIndex].expense += m.monto;
       }
     });
 

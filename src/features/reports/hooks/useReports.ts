@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useMovements } from '../../movements/hooks/useMovements';
 
-export const useReports = (userId?: number) => {
-  const { movements, loading, error, refetch } = useMovements({ userId });
+export const useReports = () => {
+  const { movements, loading, error, refetch } = useMovements();
   const [selectedMonth, setSelectedMonth] = useState(new Date());
 
   const stats = useMemo(() => {
@@ -13,26 +13,28 @@ export const useReports = (userId?: number) => {
     const month = selectedMonth.getMonth();
 
     const currentMonthMovements = movements.filter(m => {
-      const d = new Date(m.fecha);
+      const d = new Date(m.fechaMovimiento);
       return d.getFullYear() === year && d.getMonth() === month;
     });
 
     // Totals
     const income = currentMonthMovements
-      .filter(m => m.tipo === 'INCOME')
+      .filter(m => m.tipoMovimiento === 'INCOME')
       .reduce((acc, curr) => acc + curr.monto, 0);
 
     const expense = currentMonthMovements
-      .filter(m => m.tipo === 'EXPENSE')
+      .filter(m => m.tipoMovimiento === 'EXPENSE')
       .reduce((acc, curr) => acc + curr.monto, 0);
     
     // Expenses by Category
+    const COLORS = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#6366F1', '#14B8A6'];
     const expensesByCategory = currentMonthMovements
-      .filter(m => m.tipo === 'EXPENSE' && m.categoria)
+      .filter(m => m.tipoMovimiento === 'EXPENSE' && m.categoriaNombre)
       .reduce((acc, curr) => {
-        const catName = curr.categoria!.nombre;
-        const color = curr.categoria!.color || '#cccccc';
+        const catName = curr.categoriaNombre!;
+        
         if (!acc[catName]) {
+          const color = COLORS[Object.keys(acc).length % COLORS.length];
           acc[catName] = { amount: 0, color, count: 0 };
         }
         acc[catName].amount += curr.monto;

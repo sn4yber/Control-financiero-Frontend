@@ -10,9 +10,6 @@ interface CreateGoalModalProps {
 }
 
 export const CreateGoalModal = ({ isOpen, onClose, onSuccess }: CreateGoalModalProps) => {
-  const userIdStr = localStorage.getItem('userId');
-  const userId = userIdStr ? parseInt(userIdStr) : undefined;
-
   const [nombre, setNombre] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [montoObjetivo, setMontoObjetivo] = useState('');
@@ -23,11 +20,9 @@ export const CreateGoalModal = ({ isOpen, onClose, onSuccess }: CreateGoalModalP
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userId) return;
 
     try {
       await createGoal({
-        usuarioId: userId,
         nombre,
         descripcion,
         montoObjetivo: parseFloat(montoObjetivo),

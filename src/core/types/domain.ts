@@ -64,13 +64,22 @@ export interface FinancialGoal {
 export interface FinancialMovement {
   id: number;
   usuarioId: number;
-  tipo: MovementType;
+  tipoMovimiento: MovementType;
   monto: number;
   descripcion: string;
-  fecha: string; // ISO Date String
-  categoria?: Category;
-  fuenteIngreso?: IncomeSource;
-  meta?: FinancialGoal;
+  fechaMovimiento: string; // ISO Date String
+  
+  // Relations (API returns flattened names)
+  categoriaId?: number;
+  categoriaNombre?: string;
+  
+  fuenteIngresoId?: number;
+  fuenteIngresoNombre?: string;
+  
+  metaId?: number;
+  metaNombre?: string;
+
   esRecurrente: boolean;
+  patronRecurrencia?: string;
   notas?: string;
 }

@@ -1,35 +1,34 @@
-import { useMemo } from 'react';
-import { useMovements } from '../../movements/hooks/useMovements';
+import { useState, useEffect, useCallback } from 'react';
+import { dashboardService, type DashboardSummary } from '../../reports/services/dashboardService';
 
-// Este hook calcula los totales basándose en los movimientos cargados
-// Idealmente esto vendría del backend, pero lo calculamos aquí por ahora (Client-side calculation)
-export const useFinancialSummary = (userId?: number) => {
-  // Obtenemos todos los movimientos (sin filtro de fecha por defecto trae todo, o podríamos filtrar por mes si se implementara)
-  // Para el MVP asumiremos que trae los recientes o el backend filtra por defecto.
-  const { movements, loading, error } = useMovements({ userId });
+export const useFinancialSummary = () => {
+  const [summary, setSummary] = useState<DashboardSummary>({ income: 0, expense: 0, balance: 0, savings: 0, metas: [] });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const summary = useMemo(() => {
-    if (!movements.length) return { income: 0, expense: 0, balance: 0, savings: 0 };
-
-    const income = movements
-      .filter(m => m.tipo === 'INCOME')
-      .reduce((acc, curr) => acc + curr.monto, 0);
-
-    const expense = movements
-      .filter(m => m.tipo === 'EXPENSE')
-      .reduce((acc, curr) => acc + curr.monto, 0);
+  const fetchSummary = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      // Por defecto enviamos el mes actual para evitar errores en backend si no maneja bien rangos vacíos
+      // y para que coincida con la visualización mensual típica
+      const now = new Date();
+      const startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+      const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
       
-    const savings = movements
-        .filter(m => m.tipo === 'SAVINGS')
-        .reduce((acc, curr) => acc + curr.monto, 0);
+      const data = await dashboardService.getSummary(startDate, endDate);
+      setSummary(data);
+    } catch (err) {
+      console.error('Error fetching dashboard summary:', err);
+      setError('Error al cargar el resumen financiero');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-    return {
-      income,
-      expense,
-      savings,
-      balance: income - expense - savings // El ahorro también se resta del balance disponible líquido
-    };
-  }, [movements]);
+  useEffect(() => {
+    fetchSummary();
+  }, [fetchSummary]);
 
-  return { ...summary, loading, error };
+  return { ...summary, loading, error, refetch: fetchSummary };
 };

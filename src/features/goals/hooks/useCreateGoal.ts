@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { goalService } from '../services/goalService';
 import type { FinancialGoal } from '../../../core/types/domain';
 
-export type CreateGoalDTO = Omit<FinancialGoal, 'id' | 'montoActual' | 'estado'>;
+export type CreateGoalDTO = Omit<FinancialGoal, 'id' | 'montoActual' | 'estado' | 'usuarioId'>;
 
 export const useCreateGoal = () => {
   const [loading, setLoading] = useState(false);

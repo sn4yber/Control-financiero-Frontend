@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import { X, Calendar, Check, AlertCircle } from 'lucide-react';
+import { X, Calendar, Check, AlertCircle, Plus } from 'lucide-react';
 import { useCreateMovement } from '../hooks/useCreateMovement';
 import { useCategories } from '../../categories/hooks/useCategories';
+import { categoryService } from '../../categories/services/categoryService';
 import { useIncomeSources } from '../../income-sources/hooks/useIncomeSources';
+import { incomeSourceService } from '../../income-sources/services/incomeSourceService';
 import { useGoals } from '../../goals/hooks/useGoals';
 import type { MovementType } from '../../../core/types/domain';
 
@@ -13,9 +15,6 @@ interface CreateTransactionModalProps {
 }
 
 export const CreateTransactionModal = ({ isOpen, onClose, onSuccess }: CreateTransactionModalProps) => {
-  const userIdStr = localStorage.getItem('userId');
-  const userId = userIdStr ? parseInt(userIdStr) : undefined;
-  
   const [type, setType] = useState<MovementType>('EXPENSE');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
@@ -30,47 +29,112 @@ export const CreateTransactionModal = ({ isOpen, onClose, onSuccess }: CreateTra
   const [isRecurrent, setIsRecurrent] = useState(false);
   const [recurrencePattern, setRecurrencePattern] = useState<string>('MENSUAL');
 
+  // Category creation state
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [creatingCategoryLoading, setCreatingCategoryLoading] = useState(false);
+
+  // Income Source creation state
+  const [isCreatingSource, setIsCreatingSource] = useState(false);
+  const [newSourceName, setNewSourceName] = useState('');
+  const [creatingSourceLoading, setCreatingSourceLoading] = useState(false);
+
   const { createMovement, loading, error } = useCreateMovement();
   
-  // Fetch dependencies only when modal is open to avoid background errors and flashing
-  const shouldFetch = isOpen && typeof userId === 'number';
-  
-  const { categories } = useCategories(shouldFetch ? userId : undefined, type === 'EXPENSE' ? 'EXPENSE' : undefined); 
-  const { sources } = useIncomeSources(shouldFetch ? userId : undefined);
-  const { goals } = useGoals(shouldFetch ? userId : undefined);
+  const { categories, refreshCategories } = useCategories(type === 'EXPENSE' ? 'EXPENSE' : undefined); 
+  const { sources, refreshSources } = useIncomeSources();
+  const { goals } = useGoals();
 
-  // Reset form when opening/closing or changing type
+  // Reset form when opening
   useEffect(() => {
     if (isOpen) {
-        // keep defaults
+      setAmount('');
+      setDescription('');
+      setCategoryId('');
+      setIncomeSourceId('');
+      setGoalId('');
+      setIsRecurrent(false);
+      setRecurrencePattern('MENSUAL');
+      setType('EXPENSE');
+      setDate(new Date().toISOString().split('T')[0]);
     }
   }, [isOpen]);
 
+  const handleCreateSource = async () => {
+    if (!newSourceName.trim()) return;
+    
+    try {
+      setCreatingSourceLoading(true);
+      const newSrc = await incomeSourceService.create({
+        nombre: newSourceName,
+        descripcion: 'Creada desde modal',
+        tipo: 'OTHER',
+        esIngresoReal: true,
+        activa: true
+      });
+      
+      await refreshSources();
+      setIncomeSourceId(newSrc.id);
+      setIsCreatingSource(false);
+      setNewSourceName('');
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setCreatingSourceLoading(false);
+    }
+  };
+
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) return;
+    
+    try {
+      setCreatingCategoryLoading(true);
+      const newCat = await categoryService.create({
+        nombre: newCategoryName,
+        descripcion: 'Creada desde modal',
+        color: '#6B7280', // Default gray
+        icono: 'tag',
+        tipo: 'EXPENSE',
+        activa: true
+      });
+      
+      await refreshCategories();
+      setCategoryId(newCat.id);
+      setIsCreatingCategory(false);
+      setNewCategoryName('');
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setCreatingCategoryLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userId) return;
 
     try {
       await createMovement({
-        usuarioId: userId,
         tipoMovimiento: type,
         monto: parseFloat(amount),
         descripcion: description,
         fechaMovimiento: date,
         esRecurrente: isRecurrent,
         patronRecurrencia: isRecurrent ? recurrencePattern : null,
-        // Send IDs only if selected
-        categoriaId: categoryId || null,
-        fuenteIngresoId: incomeSourceId || null,
-        metaId: goalId || null
+        // Send IDs only if selected and relevant to type
+        categoriaId: type === 'EXPENSE' ? (categoryId || null) : null,
+        fuenteIngresoId: type === 'INCOME' ? (incomeSourceId || null) : null,
+        metaId: type === 'SAVINGS' ? (goalId || null) : null
       });
       
       onSuccess();
       onClose();
-      // Reset basic fields
+      // Reset fields
       setAmount('');
       setDescription('');
       setCategoryId('');
+      setIncomeSourceId('');
+      setGoalId('');
+      setIsRecurrent(false);
     } catch {
       // Error handling is done via hook state
     }
@@ -171,34 +235,134 @@ export const CreateTransactionModal = ({ isOpen, onClose, onSuccess }: CreateTra
           {/* INCOME: Income Source */}
           {type === 'INCOME' && (
              <div>
-               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Fuente de Ingreso</label>
-               <select
-                 value={incomeSourceId}
-                 onChange={(e) => setIncomeSourceId(Number(e.target.value))}
-                 className="w-full px-4 py-3 bg-gray-50 border border-gray-100 focus:bg-white focus:border-primary-500 rounded-xl outline-none"
-               >
-                 <option value="">Seleccionar fuente (Opcional)</option>
-                 {sources.map(src => (
-                   <option key={src.id} value={src.id}>{src.nombre}</option>
-                 ))}
-               </select>
+               <div className="flex items-center justify-between mb-1">
+                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Fuente / Categoría</label>
+                 {!isCreatingSource ? (
+                   <button 
+                    type="button" 
+                    onClick={() => setIsCreatingSource(true)}
+                    className="text-xs text-primary-600 font-medium hover:text-primary-700 flex items-center gap-1"
+                   >
+                     <Plus size={14} /> Nueva
+                   </button>
+                 ) : (
+                   <button 
+                    type="button" 
+                    onClick={() => {
+                      setIsCreatingSource(false);
+                      setNewSourceName('');
+                    }}
+                    className="text-xs text-red-500 font-medium hover:text-red-600 flex items-center gap-1"
+                   >
+                     <X size={14} /> Cancelar
+                   </button>
+                 )}
+               </div>
+
+               {isCreatingSource ? (
+                 <div className="flex gap-2">
+                   <input 
+                     type="text"
+                     value={newSourceName}
+                     onChange={(e) => setNewSourceName(e.target.value)}
+                     placeholder="Nombre de la nueva fuente"
+                     className="flex-1 px-4 py-3 bg-gray-50 border border-gray-100 focus:bg-white focus:border-primary-500 rounded-xl outline-none"
+                     autoFocus
+                     onKeyDown={(e) => {
+                       if (e.key === 'Enter') {
+                         e.preventDefault();
+                         handleCreateSource();
+                       }
+                     }}
+                   />
+                   <button
+                    type="button"
+                    onClick={handleCreateSource}
+                    disabled={creatingSourceLoading || !newSourceName.trim()}
+                    className="px-4 bg-primary-600 text-white rounded-xl hover:bg-primary-700 disabled:opacity-50 transition-colors flex items-center justify-center"
+                   >
+                     {creatingSourceLoading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Check size={20} />}
+                   </button>
+                 </div>
+               ) : (
+                 <select
+                   value={incomeSourceId}
+                   onChange={(e) => setIncomeSourceId(Number(e.target.value))}
+                   className="w-full px-4 py-3 bg-gray-50 border border-gray-100 focus:bg-white focus:border-primary-500 rounded-xl outline-none"
+                 >
+                   <option value="">Seleccionar fuente (Opcional)</option>
+                   {sources.map(src => (
+                     <option key={src.id} value={src.id}>{src.nombre}</option>
+                   ))}
+                 </select>
+               )}
              </div>
           )}
 
           {/* EXPENSE: Category */}
           {type === 'EXPENSE' && (
              <div>
-               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Categoría</label>
-               <select
-                 value={categoryId}
-                 onChange={(e) => setCategoryId(Number(e.target.value))}
-                 className="w-full px-4 py-3 bg-gray-50 border border-gray-100 focus:bg-white focus:border-primary-500 rounded-xl outline-none"
-               >
-                 <option value="">Seleccionar categoría (Opcional)</option>
-                 {categories.map(cat => (
-                   <option key={cat.id} value={cat.id}>{cat.nombre}</option>
-                 ))}
-               </select>
+               <div className="flex items-center justify-between mb-1">
+                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Categoría</label>
+                 {!isCreatingCategory ? (
+                   <button 
+                    type="button" 
+                    onClick={() => setIsCreatingCategory(true)}
+                    className="text-xs text-primary-600 font-medium hover:text-primary-700 flex items-center gap-1"
+                   >
+                     <Plus size={14} /> Nueva
+                   </button>
+                 ) : (
+                   <button 
+                    type="button" 
+                    onClick={() => {
+                      setIsCreatingCategory(false);
+                      setNewCategoryName('');
+                    }}
+                    className="text-xs text-red-500 font-medium hover:text-red-600 flex items-center gap-1"
+                   >
+                     <X size={14} /> Cancelar
+                   </button>
+                 )}
+               </div>
+               
+               {isCreatingCategory ? (
+                 <div className="flex gap-2">
+                   <input 
+                     type="text"
+                     value={newCategoryName}
+                     onChange={(e) => setNewCategoryName(e.target.value)}
+                     placeholder="Nombre de la nueva categoría"
+                     className="flex-1 px-4 py-3 bg-gray-50 border border-gray-100 focus:bg-white focus:border-primary-500 rounded-xl outline-none"
+                     autoFocus
+                     onKeyDown={(e) => {
+                       if (e.key === 'Enter') {
+                         e.preventDefault();
+                         handleCreateCategory();
+                       }
+                     }}
+                   />
+                   <button
+                    type="button"
+                    onClick={handleCreateCategory}
+                    disabled={creatingCategoryLoading || !newCategoryName.trim()}
+                    className="px-4 bg-primary-600 text-white rounded-xl hover:bg-primary-700 disabled:opacity-50 transition-colors flex items-center justify-center"
+                   >
+                     {creatingCategoryLoading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Check size={20} />}
+                   </button>
+                 </div>
+               ) : (
+                 <select
+                   value={categoryId}
+                   onChange={(e) => setCategoryId(Number(e.target.value))}
+                   className="w-full px-4 py-3 bg-gray-50 border border-gray-100 focus:bg-white focus:border-primary-500 rounded-xl outline-none"
+                 >
+                   <option value="">Seleccionar categoría (Opcional)</option>
+                   {categories.map(cat => (
+                     <option key={cat.id} value={cat.id}>{cat.nombre}</option>
+                   ))}
+                 </select>
+               )}
              </div>
           )}
 

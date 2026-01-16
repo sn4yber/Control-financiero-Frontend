@@ -2,13 +2,13 @@ import { apiClient } from '../../../core/api/client';
 import type { FinancialGoal, GoalStatus } from '../../../core/types/domain';
 
 export const goalService = {
-  getAllByUserId: async (userId: number, estado?: GoalStatus): Promise<FinancialGoal[]> => {
+  getAll: async (estado?: GoalStatus): Promise<FinancialGoal[]> => {
     const params = estado ? { estado } : {};
-    const response = await apiClient.get<FinancialGoal[]>(`/metas/usuario/${userId}`, { params });
+    const response = await apiClient.get<FinancialGoal[]>('/metas', { params });
     return response.data;
   },
 
-  create: async (data:  Omit<FinancialGoal, 'id' | 'montoActual' | 'estado'>): Promise<FinancialGoal> => {
+  create: async (data: Omit<FinancialGoal, 'id' | 'montoActual' | 'estado' | 'usuarioId'>): Promise<FinancialGoal> => {
     const response = await apiClient.post<FinancialGoal>('/metas', data);
     return response.data;
   },

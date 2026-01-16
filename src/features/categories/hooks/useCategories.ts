@@ -2,21 +2,16 @@ import { useState, useEffect } from 'react';
 import { categoryService } from '../services/categoryService';
 import type { Category, CategoryType } from '../../../core/types/domain';
 
-export const useCategories = (userId?: number, type?: CategoryType) => {
+export const useCategories = (type?: CategoryType) => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!userId) {
-      setLoading(false);
-      return;
-    }
-
     const fetchCategories = async () => {
       try {
         setLoading(true);
-        const data = await categoryService.getAllByUserId(userId, type);
+        const data = await categoryService.getAll(type);
         setCategories(data);
       } catch (err) {
         console.warn('Error fetching categories:', err);
@@ -28,7 +23,19 @@ export const useCategories = (userId?: number, type?: CategoryType) => {
     };
 
     fetchCategories();
-  }, [userId, type]);
+  }, [type]);
 
-  return { categories, loading, error };
+  const refreshCategories = async () => {
+    try {
+      setLoading(true);
+      const data = await categoryService.getAll(type);
+      setCategories(data);
+    } catch (err) {
+      console.warn('Error fetching categories:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { categories, loading, error, refreshCategories };
 };

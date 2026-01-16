@@ -1,7 +1,8 @@
-import { Home, ArrowRightLeft, Target, PieChart, FileText, User, LogOut } from 'lucide-react';
+import { Home, ArrowRightLeft, Target, PieChart, FileText, User, LogOut, Settings, Sun, Moon } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import clsx from 'clsx';
 import { useAuth } from '../../../features/auth/hooks/useAuth';
+import { useTheme } from '../../../core/context/ThemeContext';
 
 const menuItems = [
   { icon: Home, label: 'Inicio', path: '/' },
@@ -9,15 +10,17 @@ const menuItems = [
   { icon: Target, label: 'Metas', path: '/goals' },
   { icon: PieChart, label: 'Presupuestos', path: '/budgets' },
   { icon: FileText, label: 'Reportes', path: '/reports' },
+  { icon: Settings, label: 'Configuración', path: '/settings' },
 ];
 
 export const Sidebar = () => {
   const { logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   // Recuperar nombre de usuario del localStorage para mostrarlo
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-52 bg-dark text-slate-300 flex flex-col border-r border-slate-800 z-50">
+    <aside className="fixed left-0 top-0 h-screen w-52 bg-dark/95 backdrop-blur-xl text-slate-300 flex flex-col border-r border-slate-800 z-50 transition-all duration-300 shadow-2xl">
       {/* 1. User Profile Area */}
       <div className="h-24 flex items-center px-4 border-b border-slate-800/50">
         <button className="flex items-center gap-2 w-full p-2 rounded-xl hover:bg-white/5 transition-colors text-left group">
@@ -54,6 +57,13 @@ export const Sidebar = () => {
 
       {/* 3. Logout */}
       <div className="p-4 border-t border-slate-800">
+        <button onClick={toggleTheme}
+          className="flex items-center gap-3 w-full p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors text-sm font-medium mb-2"
+        >
+          {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          <span>{theme === 'dark' ? 'Modo Claro' : 'Modo Oscuro'}</span>
+        </button>
+
         <button 
           onClick={logout}
           className="flex items-center gap-3 w-full p-2 text-red-400 hover:bg-red-900/10 rounded-xl transition-colors text-sm font-medium"
