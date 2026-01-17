@@ -2,12 +2,25 @@ import { useState } from 'react';
 import { useGoals } from '../features/goals/hooks/useGoals';
 import { useDeleteGoal } from '../features/goals/hooks/useDeleteGoal';
 import { CreateGoalModal } from '../features/goals/components/CreateGoalModal';
-import { Target, Plus, Loader2, Trophy, Clock, TrendingUp, Trash2 } from 'lucide-react';
+import { Target, Plus, Loader2, Trophy, Clock, TrendingUp, Trash2, Pencil } from 'lucide-react';
+import type { FinancialGoal } from '../core/types/domain';
 
 export const GoalsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedGoal, setSelectedGoal] = useState<FinancialGoal | null>(null);
+
   const { goals, loading, error, refetch } = useGoals();
   const { deleteGoal, loading: deleting } = useDeleteGoal();
+
+  const handleEdit = (goal: FinancialGoal) => {
+    setSelectedGoal(goal);
+    setIsModalOpen(true);
+  };
+
+  const handleCreate = () => {
+    setSelectedGoal(null);
+    setIsModalOpen(true);
+  };
 
   const handleDelete = async (id: number) => {
     if (window.confirm('¿Estás seguro de eliminar esta meta?')) {
@@ -60,7 +73,7 @@ export const GoalsPage = () => {
           <p className="text-gray-500 mt-1">Define objetivos y sigue tu progreso.</p>
         </div>
         <button 
-          onClick={() => setIsModalOpen(true)}
+          onClick={handleCreate}
           className="flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors shadow-lg shadow-primary-900/20"
         >
           <Plus size={20} />
@@ -95,15 +108,25 @@ export const GoalsPage = () => {
                
                return (
                  <div key={goal.id} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow group relative">
-                    <button 
-                        onClick={() => handleDelete(goal.id)}
-                        disabled={deleting}
-                        className="absolute top-4 right-4 p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-all opacity-0 group-hover:opacity-100"
-                        title="Eliminar meta"
-                    >
-                        <Trash2 size={18} />
-                    </button>
-                    <div className="flex justify-between items-start mb-4 pr-8">
+                    <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                            onClick={() => handleEdit(goal)}
+                            className="p-2 text-gray-300 hover:text-blue-500 hover:bg-blue-50 rounded-full transition-all"
+                            title="Editar meta"
+                        >
+                            <Pencil size={18} />
+                        </button>
+                        <button 
+                            onClick={() => handleDelete(goal.id)}
+                            disabled={deleting}
+                            className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
+                            title="Eliminar meta"
+                        >
+                            <Trash2 size={18} />
+                        </button>
+                    </div>
+                    
+                    <div className="flex justify-between items-start mb-4 pr-16">
                        <div className="p-3 bg-blue-50 text-blue-600 rounded-xl group-hover:bg-blue-100 transition-colors">
                          <Target size={24} />
                        </div>
@@ -154,8 +177,11 @@ export const GoalsPage = () => {
       <CreateGoalModal 
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
+        initialData={selectedGoal}
         onSuccess={() => {
           refetch();
+          setIsModalOpen(false);
+          setSelectedGoal(null);
         }}
       />
     </div>

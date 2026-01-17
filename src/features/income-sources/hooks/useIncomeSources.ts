@@ -14,9 +14,10 @@ export const useIncomeSources = () => {
       setSources(data);
     } catch (err) {
       // Ignoramos el error 500 para no bloquear la UI, asumiendo lista vacía
-      console.warn('Error fetching income sources:', err);
+      console.warn('Backend unavailable (Income Sources), returning empty list.');
       setSources([]); 
-      setError('No se pudieron cargar las fuentes de ingreso');
+      // Si el error es 500, no lo mostramos al usuario para no alarmar
+      setError(null);
     } finally {
       setLoading(false);
     }

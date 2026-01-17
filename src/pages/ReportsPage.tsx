@@ -1,13 +1,25 @@
 import { useReports } from '../features/reports/hooks/useReports';
 import { useMovements } from '../features/movements/hooks/useMovements';
 import { useChartData } from '../features/reports/hooks/useChartData';
+import { useExportReports } from '../features/reports/hooks/useExportReports';
 import { FinancialHistoryChart } from '../features/reports/components/FinancialHistoryChart';
-import { TrendingUp, TrendingDown, DollarSign, ChevronLeft, ChevronRight, BarChart3, Loader2 } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, ChevronLeft, ChevronRight, BarChart3, Loader2, FileText, FileSpreadsheet } from 'lucide-react';
 
 export const ReportsPage = () => {
   const { stats, loading, error, selectedMonth, setSelectedMonth, refetch } = useReports();
-  const { movements } = useMovements(); // Fetch all movements for history
+  const { movements } = useMovements(); 
   const { data: historyData } = useChartData(movements);
+  const { downloadPDF, downloadExcel, exporting } = useExportReports();
+
+  const handleExport = (type: 'pdf' | 'excel') => {
+    const start = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1);
+    const end = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0);
+    const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const range = { startDate: fmt(start), endDate: fmt(end) };
+    
+    if (type === 'pdf') downloadPDF(range);
+    else downloadExcel(range);
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-CO', {
@@ -36,16 +48,40 @@ export const ReportsPage = () => {
           <p className="text-gray-500 dark:text-gray-400 mt-1">Analiza tus patrones de gasto e ingresos.</p>
         </div>
         
-        <div className="flex items-center bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 p-1 transition-colors">
-          <button onClick={() => changeMonth(-1)} className="p-2 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-lg text-gray-500 dark:text-gray-400">
-            <ChevronLeft size={20} />
-          </button>
-          <div className="px-4 py-1 min-w-[140px] text-center font-medium capitalize text-gray-900 dark:text-white">
-            {monthName}
+        <div className="flex flex-col sm:flex-row gap-3">
+          {/* Month Picker */}
+          <div className="flex items-center bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 p-1 transition-colors">
+            <button onClick={() => changeMonth(-1)} className="p-2 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-lg text-gray-500 dark:text-gray-400">
+              <ChevronLeft size={20} />
+            </button>
+            <div className="px-4 py-1 min-w-[140px] text-center font-medium capitalize text-gray-900 dark:text-white">
+              {monthName}
+            </div>
+            <button onClick={() => changeMonth(1)} className="p-2 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-lg text-gray-500 dark:text-gray-400">
+              <ChevronRight size={20} />
+            </button>
           </div>
-          <button onClick={() => changeMonth(1)} className="p-2 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-lg text-gray-500 dark:text-gray-400">
-            <ChevronRight size={20} />
-          </button>
+
+          {/* Export Actions */}
+          <div className="flex items-center bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 p-1 transition-colors">
+             <button 
+                onClick={() => handleExport('pdf')} 
+                disabled={exporting || loading}
+                title="Descargar Reporte PDF"
+                className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400 rounded-lg transition-colors disabled:opacity-50"
+             >
+                <FileText size={20} />
+             </button>
+             <div className="w-px h-5 bg-gray-200 dark:bg-slate-700 mx-1"></div>
+             <button 
+                onClick={() => handleExport('excel')} 
+                disabled={exporting || loading}
+                title="Descargar Excel"
+                className="p-2 hover:bg-green-50 dark:hover:bg-green-900/20 text-gray-400 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400 rounded-lg transition-colors disabled:opacity-50"
+             >
+                <FileSpreadsheet size={20} />
+             </button>
+          </div>
         </div>
       </div>
 

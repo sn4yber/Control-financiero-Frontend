@@ -20,7 +20,7 @@ export const Sidebar = () => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-52 bg-dark/95 backdrop-blur-xl text-slate-300 flex flex-col border-r border-slate-800 z-50 transition-all duration-300 shadow-2xl">
+    <aside className="hidden md:flex fixed left-0 top-0 h-screen w-52 bg-slate-900/95 backdrop-blur-xl text-slate-300 flex-col border-r border-slate-800 z-50 transition-all duration-300 shadow-2xl">
       {/* 1. User Profile Area */}
       <div className="h-24 flex items-center px-4 border-b border-slate-800/50">
         <button className="flex items-center gap-2 w-full p-2 rounded-xl hover:bg-white/5 transition-colors text-left group">

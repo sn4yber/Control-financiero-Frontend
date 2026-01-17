@@ -7,23 +7,18 @@ import { useCategories } from '../features/categories/hooks/useCategories';
 import { useIncomeSources } from '../features/income-sources/hooks/useIncomeSources';
 import { useChartData } from '../features/reports/hooks/useChartData';
 import { Link } from 'react-router-dom';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useTheme } from '../core/context/ThemeContext';
 import { Skeleton } from '../shared/components/ui/Skeleton';
-
-// Helper para formatear moneda
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('es-CO', {
-    style: 'currency',
-    currency: 'COP',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-};
+import { FinancialWisdomWidget } from '../features/intelligence/components/FinancialWisdomWidget';
+import { formatCurrency } from '../shared/utils/format';
 
 export const HomePage = () => {
   const { theme } = useTheme();
   
+  // Estado para filtro interactivo de gráficas
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
   // Obtener nombre del usuario si existe
   const userData = localStorage.getItem('user');
   const userName = userData ? JSON.parse(userData).fullName : 'Usuario';
@@ -50,49 +45,76 @@ export const HomePage = () => {
     return 'Buenas noches';
   };
 
-  // Cálculo local de respaldo si falla el endpoint de resumen
+  // Cálculo local de respaldo y prioridad para reactividad inmediata
   const localSummary = useMemo(() => {
-    if (!summaryError) return null;
+    // Si tenemos movimientos cargados, calculamos el resumen localmente
+    // Esto asegura que el balance coincida con la lista de transacciones y gráficas
+    if (movements.length > 0 || !loadingMovements) {
+        const now = new Date();
+        // Ajuste para incluir todo el día en zonas horarias locales si es necesario
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        startOfMonth.setHours(0, 0, 0, 0);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        endOfMonth.setHours(23, 59, 59, 999);
+
+        const monthlyMovements = movements.filter(m => {
+        // Asumiendo fechaMovimiento es YYYY-MM-DD o ISO
+        // Ajuste simple: tratar la fecha como local
+        const dateParts = m.fechaMovimiento.split('T')[0].split('-');
+        const localDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
+        
+        return localDate >= startOfMonth && localDate <= endOfMonth;
+        });
+
+        const incomeCalc = monthlyMovements
+        .filter(m => m.tipoMovimiento === 'INCOME')
+        .reduce((acc, m) => acc + m.monto, 0);
+        
+        const expenseCalc = monthlyMovements
+        .filter(m => m.tipoMovimiento === 'EXPENSE')
+        .reduce((acc, m) => acc + m.monto, 0);
+
+        const savingsCalc = monthlyMovements
+        .filter(m => m.tipoMovimiento === 'SAVINGS')
+        .reduce((acc, m) => acc + m.monto, 0);
+
+        // Balance siempre debe ser global (histórico), no solo del mes
+        const globalBalance = movements.reduce((acc, m) => {
+          if (m.tipoMovimiento === 'INCOME') return acc + m.monto;
+          if (m.tipoMovimiento === 'EXPENSE') return acc - m.monto;
+          if (m.tipoMovimiento === 'SAVINGS') return acc - m.monto;
+          return acc;
+        }, 0);
+
+        return {
+        income: incomeCalc,
+        expense: expenseCalc,
+        balance: globalBalance,
+        savings: savingsCalc
+        };
+    }
     
-    // Filtrar movimientos del mes actual para que coincida con la vista por defecto
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-
-    const monthlyMovements = movements.filter(m => {
-      const date = new Date(m.fechaMovimiento);
-      return date >= startOfMonth && date <= endOfMonth;
-    });
-
-    const incomeCalc = monthlyMovements
-      .filter(m => m.tipoMovimiento === 'INCOME')
-      .reduce((acc, m) => acc + m.monto, 0);
-      
-    const expenseCalc = monthlyMovements
-      .filter(m => m.tipoMovimiento === 'EXPENSE')
-      .reduce((acc, m) => acc + m.monto, 0);
-
-    // Savings logic depend on specific movement type 'SAVINGS' if exists, or just INCOME - EXPENSE?
-    // Based on domain, 'SAVINGS' is a movement type.
-    const savingsCalc = monthlyMovements
-      .filter(m => m.tipoMovimiento === 'SAVINGS')
-      .reduce((acc, m) => acc + m.monto, 0);
-
-    return {
-      income: incomeCalc,
-      expense: expenseCalc,
-      balance: incomeCalc - expenseCalc - savingsCalc, // Basic cashflow logic
-      savings: savingsCalc
-    };
-  }, [movements, summaryError]);
+    return null;
+  }, [movements, loadingMovements]);
 
   const displayIncome = localSummary ? localSummary.income : income;
   const displayExpense = localSummary ? localSummary.expense : expense;
   const displayBalance = localSummary ? localSummary.balance : balance;
   const displaySavings = localSummary ? localSummary.savings : savings;
 
+  // Filtrado interactivo (Drill-down)
+  const filteredMovements = useMemo(() => {
+    if (!selectedCategory) return movements;
+    return movements.filter(m => {
+        const catName = m.categoriaNombre 
+        || categories.find(c => c.id === m.categoriaId)?.nombre 
+        || 'Sin Categoría';
+        return catName === selectedCategory;
+    });
+  }, [movements, selectedCategory, categories]);
+
   // Últimos 5 movimientos
-  const recentMovements = movements.slice(0, 5);
+  const recentMovements = filteredMovements.slice(0, 5);
 
   // Calcular datos para gráfico de torta (Gastos por Categoría)
   const expensesByCategoryChart = useMemo(() => {
@@ -226,6 +248,9 @@ export const HomePage = () => {
         </div>
       </div>
 
+      {/* AI Financial Wisdom Widget */}
+      <FinancialWisdomWidget />
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Cash Flow Chart */}
         <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-6 shadow-sm transition-colors">
@@ -320,10 +345,24 @@ export const HomePage = () => {
                       paddingAngle={5}
                       dataKey="value"
                       stroke="none"
+                      onClick={(data) => setSelectedCategory(prev => prev === data.name ? null : data.name)}
+                      className="cursor-pointer"
                     >
-                      {expensesByCategoryChart.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
+                      {expensesByCategoryChart.map((entry, index) => {
+                        const color = COLORS[index % COLORS.length];
+                        const isActive = selectedCategory === entry.name;
+                        const isDimmed = selectedCategory && !isActive;
+                        
+                        return (
+                          <Cell 
+                            key={`cell-${index}`} 
+                            fill={isDimmed ? (theme === 'dark' ? '#334155' : '#e5e7eb') : color}
+                            stroke={isActive ? (theme === 'dark' ? '#1e293b' : '#fff') : 'none'}
+                            strokeWidth={isActive ? 2 : 0}
+                            style={{ opacity: isDimmed ? 0.6 : 1, transition: 'all 0.3s' }}
+                          />
+                        );
+                      })}
                     </Pie>
                     <Tooltip 
                       formatter={(value: number | undefined) => formatCurrency(value || 0)}

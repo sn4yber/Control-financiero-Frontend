@@ -13,6 +13,11 @@ export const goalService = {
     return response.data;
   },
 
+  update: async (id: number, data: Partial<FinancialGoal>): Promise<FinancialGoal> => {
+    const response = await apiClient.put<FinancialGoal>(`/metas/${id}`, data);
+    return response.data;
+  },
+
   delete: async (id: number): Promise<void> => {
     await apiClient.delete(`/metas/${id}`);
   }

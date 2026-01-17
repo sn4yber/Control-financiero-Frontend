@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { Sidebar } from '../shared/components/ui/Sidebar';
+import { MobileNavbar } from '../shared/components/ui/MobileNavbar';
 import { Search, Settings } from 'lucide-react';
 
 export const DashboardLayout = () => {
@@ -18,14 +19,17 @@ export const DashboardLayout = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex transition-colors duration-300">
-      {/* Sidebar fijo */}
+      {/* Sidebar fijo - Desktop */}
       <Sidebar />
+      
+      {/* Navbar fijo - Mobile */}
+      <MobileNavbar />
 
       {/* Main Content Area */}
-      <div className="flex-1 ml-52 flex flex-col min-w-0">
+      <div className="flex-1 ml-0 md:ml-52 flex flex-col min-w-0 pb-20 md:pb-0">
         
         {/* Header Superior */}
-        <header className="h-20 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-8 flex items-center justify-between sticky top-0 z-40 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md transition-colors duration-300">
+        <header className="h-20 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 md:px-8 flex items-center justify-between sticky top-0 z-40 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md transition-colors duration-300">
           <div className="flex-1 max-w-xl">
              <form onSubmit={handleSearch} className="relative group">
                 <Search size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary-500 transition-colors" />

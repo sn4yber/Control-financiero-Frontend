@@ -6,6 +6,9 @@ import { categoryService } from '../../categories/services/categoryService';
 import { useIncomeSources } from '../../income-sources/hooks/useIncomeSources';
 import { incomeSourceService } from '../../income-sources/services/incomeSourceService';
 import { useGoals } from '../../goals/hooks/useGoals';
+import { intelligenceService } from '../../intelligence/services/intelligenceService';
+import { formatCurrency, parseCurrency } from '../../../shared/utils/format';
+import { Bot, Sparkles } from 'lucide-react';
 import type { MovementType } from '../../../core/types/domain';
 
 interface CreateTransactionModalProps {
@@ -38,6 +41,10 @@ export const CreateTransactionModal = ({ isOpen, onClose, onSuccess }: CreateTra
   const [isCreatingSource, setIsCreatingSource] = useState(false);
   const [newSourceName, setNewSourceName] = useState('');
   const [creatingSourceLoading, setCreatingSourceLoading] = useState(false);
+
+  // AI Analysis State
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<{ message: string; severity: 'info' | 'warning' | 'danger' | 'success' } | null>(null);
 
   const { createMovement, loading, error } = useCreateMovement();
   
@@ -109,13 +116,73 @@ export const CreateTransactionModal = ({ isOpen, onClose, onSuccess }: CreateTra
     }
   };
 
+  const handleAnalyze = async () => {
+    if (!amount) return; // Description is optional for savings analysis context
+    
+    try {
+      setIsAnalyzing(true);
+      setAnalysisResult(null);
+      
+      if (type === 'EXPENSE') {
+        const categoryName = categories.find(c => c.id === categoryId)?.nombre || 'General';
+        try {
+            const result = await intelligenceService.analyzeExpense(parseFloat(amount), categoryName, description);
+            setAnalysisResult({ 
+                message: result.message || 'Gasto analizado. Parece estar dentro de lo normal.',
+                severity: result.severity || 'info'
+            });
+        } catch (err) {
+            // Mock fallback handled inside service or here
+             setTimeout(() => {
+                const val = parseFloat(amount);
+                if (val > 1000000) {
+                    setAnalysisResult({ message: '⚠️ Gasto inusualmente alto.', severity: 'danger' });
+                } else {
+                    setAnalysisResult({ message: '✅ Gasto normal.', severity: 'info' });
+                }
+            }, 1000);
+        }
+      } else if (type === 'SAVINGS') {
+        const goal = goals.find(g => g.id === goalId);
+        const goalName = goal?.nombre || 'Ahorro General';
+        const result = await intelligenceService.analyzeSavings(parseFloat(amount), goalName);
+        setAnalysisResult(result);
+      }
+
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsAnalyzing(false); // No timeout here to be snappier if promise resolves fast
+    }
+  };
+
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Eliminar todo lo que no sea dígito
+    const rawValue = e.target.value.replace(/\D/g, '');
+    
+    if (!rawValue) {
+      setAmount('');
+      return;
+    }
+
+    const numberValue = parseInt(rawValue, 10);
+    // Usar el formateador que ya tenemos (ej: $ 1.000.000)
+    // Pero ojo: formatCurrency retorna algo como "$ 1.000",
+    // si queremos el input limpio sin simbolo $ repetido en el UI (porque ya hay un icono absolute)
+    // podríamos quitar el simbolo. Pero formatCurrency lo incluye.
+    // Una opción es dejar que el input muestre todo incluyendo el $.
+    // O quitar el icono absolute del input.
+    // Vamos a dejar el format completo.
+    setAmount(formatCurrency(numberValue));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
       await createMovement({
         tipoMovimiento: type,
-        monto: parseFloat(amount),
+        monto: parseCurrency(amount),
         descripcion: description,
         fechaMovimiento: date,
         esRecurrente: isRecurrent,
@@ -204,22 +271,44 @@ export const CreateTransactionModal = ({ isOpen, onClose, onSuccess }: CreateTra
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Monto</label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium">$</span>
               <input
-                type="number"
+                type="text"
                 required
-                min="0"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="0"
-                className="w-full pl-8 pr-4 py-3 bg-gray-50 border border-transparent focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-50 rounded-xl text-lg font-bold text-gray-900 transition-all outline-none"
+                onChange={handleAmountChange}
+                placeholder="$ 0"
+                className="w-full px-4 py-3 bg-gray-50 border border-transparent focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-50 rounded-xl text-lg font-bold text-gray-900 transition-all outline-none"
               />
             </div>
           </div>
 
-          {/* Description */}
+          {/* Description with AI Help */}
           <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Descripción</label>
+            <div className="flex justify-between items-center mb-1">
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Descripción</label>
+              {(type === 'EXPENSE' || type === 'SAVINGS') && (
+                <button
+                  type="button"
+                  onClick={handleAnalyze}
+                  disabled={isAnalyzing || !amount || (type === 'EXPENSE' && !description)}
+                  className={`text-xs flex items-center gap-1 font-medium transition-colors ${
+                    (!amount || (type === 'EXPENSE' && !description))
+                      ? 'text-gray-300 cursor-not-allowed' 
+                      : 'text-purple-600 hover:text-purple-700'
+                  }`}
+                  title="Analizar con IA"
+                >
+                    {isAnalyzing ? (
+                        <span className="animate-pulse">Analizando...</span>
+                    ) : (
+                        <>
+                            <Sparkles size={14} />
+                            {type === 'SAVINGS' ? 'Evaluar ahorro' : 'Analizar gasto'}
+                        </>
+                    )}
+                </button>
+              )}
+            </div>
             <input
               type="text"
               required
@@ -228,6 +317,22 @@ export const CreateTransactionModal = ({ isOpen, onClose, onSuccess }: CreateTra
               placeholder="Ej: Salario, Compras, Cine..."
               className="w-full px-4 py-3 bg-gray-50 border border-gray-100 focus:bg-white focus:border-primary-500 focus:ring-2 focus:ring-primary-50 rounded-xl transition-all outline-none"
             />
+            
+            {/* AI Result */}
+            {analysisResult && (
+                <div className={`mt-2 p-3 text-sm rounded-lg flex items-start gap-2 animate-in slide-in-from-top-2 ${
+                    analysisResult.severity === 'danger' ? 'bg-red-50 text-red-700' :
+                    analysisResult.severity === 'warning' ? 'bg-amber-50 text-amber-700' :
+                    analysisResult.severity === 'success' ? 'bg-green-50 text-green-700' :
+                    'bg-blue-50 text-blue-700'
+                }`}>
+                    <Bot size={18} className="mt-0.5 flex-shrink-0" />
+                    <div>
+                        <p className="font-medium">Análisis Inteligente:</p>
+                        <p>{analysisResult.message}</p>
+                    </div>
+                </div>
+            )}
           </div>
 
           {/* Dynamic Fields based on Type */}

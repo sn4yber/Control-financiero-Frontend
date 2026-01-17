@@ -41,7 +41,7 @@ export const FinancialHistoryChart = ({ data }: FinancialHistoryChartProps) => {
         <h3 className="font-bold text-gray-900 dark:text-white">Tendencia de Ingresos y Gastos</h3>
       </div>
 
-      <div className="h-80 w-full">
+      <div style={{ width: '100%', height: 320, position: 'relative' }}>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
             data={chartData}
@@ -77,13 +77,13 @@ export const FinancialHistoryChart = ({ data }: FinancialHistoryChartProps) => {
                 tickFormatter={(value) => `$${value / 1000000}M`} 
             />
             <Tooltip
-              contentStyle={{ 
+              contentStyle={{
                 backgroundColor: theme === 'dark' ? '#1e293b' : 'rgba(255, 255, 255, 0.95)',
-                borderRadius: '8px', 
-                border: theme === 'dark' ? '1px solid #334155' : 'none', 
-                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' 
+                borderRadius: '8px',
+                border: theme === 'dark' ? '1px solid #334155' : 'none',
+                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
               }}
-              formatter={(value: number | undefined) => formatCurrency(value || 0)}
+              formatter={(value: number | undefined) => [formatCurrency(value || 0), '']}
               labelStyle={{ color: theme === 'dark' ? '#94a3b8' : '#374151' }}
               itemStyle={{ color: theme === 'dark' ? '#e2e8f0' : '#374151' }}
             />
