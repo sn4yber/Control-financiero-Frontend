@@ -1,13 +1,17 @@
 import { useState } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Sidebar } from '../shared/components/ui/Sidebar';
 import { MobileNavbar } from '../shared/components/ui/MobileNavbar';
-import { Search, Settings } from 'lucide-react';
+import { Search, Settings, Command } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useKBar } from 'kbar';
 
 export const DashboardLayout = () => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const userName = user.fullName || 'Usuario';
   const navigate = useNavigate();
+  const location = useLocation();
+  const { query } = useKBar();
   const [searchTerm, setSearchTerm] = useState('');
 
   const handleSearch = (e: React.FormEvent) => {
@@ -30,17 +34,17 @@ export const DashboardLayout = () => {
         
         {/* Header Superior */}
         <header className="h-20 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 md:px-8 flex items-center justify-between sticky top-0 z-40 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md transition-colors duration-300">
-          <div className="flex-1 max-w-xl">
-             <form onSubmit={handleSearch} className="relative group">
-                <Search size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary-500 transition-colors" />
-                <input 
-                  type="text" 
-                  placeholder="Buscar movimientos..." 
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl focus:bg-white dark:focus:bg-slate-600 focus:ring-2 focus:ring-primary-100 focus:border-primary-500 outline-none transition-all placeholder:text-gray-400 dark:text-white"
-                />
-             </form>
+          <div className="flex-1 max-w-xl flex items-center gap-2">
+             <div onClick={query.toggle} className="cursor-pointer group flex-1 relative">
+               <Search size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-hover:text-primary-500 transition-colors" />
+               <div className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl text-gray-500 dark:text-gray-300 flex items-center justify-between text-sm group-hover:bg-white dark:group-hover:bg-slate-600 transition-all">
+                  <span>Buscar o ejecutar comandos...</span>
+                  <div className="flex items-center gap-1">
+                    <kbd className="px-1.5 py-0.5 text-xs font-semibold text-gray-500 bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-500 rounded">Ctrl</kbd> 
+                    <kbd className="px-1.5 py-0.5 text-xs font-semibold text-gray-500 bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-500 rounded">K</kbd>
+                  </div>
+               </div>
+             </div>
           </div>
 
           <div className="flex items-center gap-4">
@@ -68,10 +72,19 @@ export const DashboardLayout = () => {
         </header>
 
         {/* Dynamic Page Content */}
-        <main className="flex-1 p-8 overflow-x-hidden">
-          <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 slide-in-from-bottom-4">
-            <Outlet />
-          </div>
+        <main className="flex-1 p-4 md:p-8 overflow-x-hidden">
+          <AnimatePresence mode="wait">
+            <motion.div 
+              key={location.pathname}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="max-w-7xl mx-auto space-y-8"
+            >
+              <Outlet />
+            </motion.div>
+          </AnimatePresence>
         </main>
       </div>
     </div>

@@ -1,4 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { KBarProvider } from 'kbar';
+import { CommandPalette } from './shared/components/ui/CommandPalette';
 import { DashboardLayout } from './layouts/DashboardLayout';
 import { AuthLayout } from './layouts/AuthLayout';
 import { HomePage } from './pages/HomePage';
@@ -14,7 +16,9 @@ import { ProtectedRoute } from './features/auth/components/ProtectedRoute';
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
+      <KBarProvider>
+        <CommandPalette />
+        <Routes>
         {/* Rutas Públicas de Autenticación */}
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<LoginPage />} />
@@ -38,6 +42,7 @@ function App() {
         {/* Ruta catch-all */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </KBarProvider>
     </BrowserRouter>
   );
 }
