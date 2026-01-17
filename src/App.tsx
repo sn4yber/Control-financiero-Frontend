@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { KBarProvider } from 'kbar';
 import { CommandPalette } from './shared/components/ui/CommandPalette';
 import { DashboardLayout } from './layouts/DashboardLayout';
@@ -14,8 +14,12 @@ import { SettingsPage } from './pages/SettingsPage';
 import { ProtectedRoute } from './features/auth/components/ProtectedRoute';
 
 function App() {
+  // Use HashRouter for Electron (file protocol) to avoid routing issues with file paths
+  // Use BrowserRouter for Web (http/https) for cleaner URLs
+  const Router = window.location.protocol === 'file:' ? HashRouter : BrowserRouter;
+
   return (
-    <BrowserRouter>
+    <Router>
       <KBarProvider>
         <CommandPalette />
         <Routes>
@@ -43,7 +47,7 @@ function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       </KBarProvider>
-    </BrowserRouter>
+    </Router>
   );
 }
 

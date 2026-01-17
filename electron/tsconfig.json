@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "useDefineForClassFields": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "sourceMap": true,
+    "resolveJsonModule": true,
+    "isolatedModules": false,
+    "esModuleInterop": true,
+    "types": ["electron", "node"],
+    "outDir": "../dist-electron",
+    "skipLibCheck": true
+  },
+  "include": ["main.ts", "preload.ts"]
+}
