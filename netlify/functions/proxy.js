@@ -41,6 +41,10 @@ export const handler = async (event, context) => {
     // Convert Headers object to plain object
     const responseHeaders = {};
     response.headers.forEach((value, key) => {
+      // Skip headers that can cause issues with the proxy response
+      if (['content-encoding', 'content-length', 'transfer-encoding', 'connection'].includes(key.toLowerCase())) {
+        return;
+      }
       responseHeaders[key] = value;
     });
 
