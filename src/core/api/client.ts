@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// URL base de tu backend en producción
-const API_URL = 'https://api-control-financiero.onrender.com/api';
+// Usamos /api para aprovechar el proxy de Vite (dev) y Netlify (prod) y evitar problemas de CORS
+const API_URL = '/api';
 
 export const apiClient = axios.create({
   baseURL: API_URL,
