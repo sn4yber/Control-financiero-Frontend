@@ -1,8 +1,7 @@
-import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Sidebar } from '../shared/components/ui/Sidebar';
 import { MobileNavbar } from '../shared/components/ui/MobileNavbar';
-import { Search, Settings, Command } from 'lucide-react';
+import { Search, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useKBar } from 'kbar';
 
@@ -12,14 +11,6 @@ export const DashboardLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { query } = useKBar();
-  const [searchTerm, setSearchTerm] = useState('');
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchTerm.trim()) {
-      navigate(`/transactions?search=${encodeURIComponent(searchTerm)}`);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex transition-colors duration-300">
