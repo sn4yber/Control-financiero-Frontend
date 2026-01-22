@@ -1,5 +1,6 @@
 // services/keepAlive.service.ts
-const API_URL = 'https://api-control-financiero.onrender.com';
+// Usar /api para aprovechar el proxy de Vite (dev) y Netlify (prod) y evitar CORS
+const API_URL = '/api';
 const PING_INTERVAL = 10 * 60 * 1000; // 10 minutos
 
 class KeepAliveService {
@@ -39,7 +40,7 @@ class KeepAliveService {
    */
   private async ping() {
     try {
-      const response = await fetch(`${API_URL}/api/ping`, {
+      const response = await fetch(`${API_URL}/ping`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
