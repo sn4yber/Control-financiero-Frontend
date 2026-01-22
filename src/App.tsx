@@ -1,5 +1,6 @@
 import { BrowserRouter, HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { KBarProvider } from 'kbar';
+import { useEffect } from 'react';
 import { CommandPalette } from './shared/components/ui/CommandPalette';
 import { DashboardLayout } from './layouts/DashboardLayout';
 import { AuthLayout } from './layouts/AuthLayout';
@@ -12,8 +13,17 @@ import { ReportsPage } from './pages/ReportsPage';
 import { BudgetsPage } from './pages/BudgetsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { ProtectedRoute } from './features/auth/components/ProtectedRoute';
+import { keepAliveService } from './core/services/keepAliveService';
 
 function App() {
+  // 🔥 Iniciar keep-alive al montar la aplicación
+  useEffect(() => {
+    keepAliveService.start();
+    
+    return () => {
+      keepAliveService.stop();
+    };
+  }, []);
   // Use HashRouter for Electron (file protocol) to avoid routing issues with file paths
   // Use BrowserRouter for Web (http/https) for cleaner URLs
   const Router = window.location.protocol === 'file:' ? HashRouter : BrowserRouter;
