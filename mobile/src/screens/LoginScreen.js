@@ -47,7 +47,7 @@ export const LoginScreen = ({ navigation }) => {
       const response = await authService.login(username, password);
       setShowSuccessModal(true);
       setTimeout(() => {
-        navigation.replace('Home');
+        navigation.replace('Main');
       }, 2200);
     } catch (error) {
       Alert.alert(
