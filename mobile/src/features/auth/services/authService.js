@@ -5,15 +5,15 @@ export const authService = {
   // Login
   login: async (usernameOrEmail, password) => {
     try {
-      // Limpiar espacios en blanco y enviar el username/email en ambos campos
+      // Limpiar espacios en blanco
       const cleanUsername = usernameOrEmail.trim();
       const cleanPassword = password.trim();
       
-      const payload = {
-        username: cleanUsername,
-        email: cleanUsername,
-        password: cleanPassword,
-      };
+      // Detectar si es email o username
+      const isEmail = cleanUsername.includes('@');
+      const payload = isEmail 
+        ? { email: cleanUsername, password: cleanPassword }
+        : { username: cleanUsername, password: cleanPassword };
       
       console.log('Login attempt with:', payload);
       const response = await apiClient.post('/auth/login', payload);
@@ -29,7 +29,7 @@ export const authService = {
           email: response.data.email,
           fullName: response.data.fullName,
         };
-        await AsyncStorage.setItem('user', JSON.stringify(userData));
+        await AsyncStorage.setItem('userData', JSON.stringify(userData));
       }
       
       return response.data;
@@ -41,23 +41,36 @@ export const authService = {
   },
 
   // Register
-  register: async (email, name, password) => {
+  register: async (email, fullName, password) => {
     try {
-      const response = await apiClient.post('/auth/register', {
+      const payload = {
         email: email.trim(),
-        name: name.trim(),
+        username: email.split('@')[0].trim(), // Generar username del email
+        fullName: fullName.trim(),
         password: password.trim(),
-      });
+      };
+      
+      console.log('Register attempt with:', payload);
+      const response = await apiClient.post('/auth/register', payload);
+      console.log('Register response:', response.data);
       
       if (response.data.token) {
         await AsyncStorage.setItem('token', response.data.token);
-        if (response.data.user) {
-          await AsyncStorage.setItem('user', JSON.stringify(response.data.user));
-        }
+        
+        // Guardar datos del usuario
+        const userData = {
+          id: response.data.userId,
+          username: response.data.username,
+          email: response.data.email,
+          fullName: response.data.fullName,
+        };
+        await AsyncStorage.setItem('userData', JSON.stringify(userData));
       }
       
       return response.data;
     } catch (error) {
+      console.error('Register error:', error.response?.data || error.message);
+      console.error('Full error:', error);
       throw error.response?.data || { message: 'Error al registrarse' };
     }
   },
@@ -66,7 +79,7 @@ export const authService = {
   logout: async () => {
     try {
       await AsyncStorage.removeItem('token');
-      await AsyncStorage.removeItem('user');
+      await AsyncStorage.removeItem('userData');
     } catch (error) {
       console.error('Error during logout:', error);
     }
@@ -75,7 +88,7 @@ export const authService = {
   // Get current user from storage
   getCurrentUser: async () => {
     try {
-      const userStr = await AsyncStorage.getItem('user');
+      const userStr = await AsyncStorage.getItem('userData');
       return userStr ? JSON.parse(userStr) : null;
     } catch (error) {
       console.error('Error getting current user:', error);

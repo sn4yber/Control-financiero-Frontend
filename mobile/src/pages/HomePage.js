@@ -1,26 +1,44 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { View, StyleSheet, Text, ImageBackground, ScrollView, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFinancialSummary } from '../features/financial-context/hooks/useFinancialSummary';
 import { useGoals } from '../features/goals/hooks/useGoals';
 import { useMovements } from '../features/movements/hooks/useMovements';
+import { profileService } from '../features/auth/services/profileService';
 import Svg, { Circle, Path } from 'react-native-svg';
 
 export const HomePage = ({ navigation }) => {
   const [userName, setUserName] = useState('Usuario');
+  const [profileImage, setProfileImage] = useState(null);
   const { income, expense, balance, loading: loadingSummary } = useFinancialSummary();
-  const { goals, loading: loadingGoals } = useGoals();
-  const { movements, loading: loadingMovements } = useMovements();
+  const { goals, loading: loadingGoals, refetch: refetchGoals } = useGoals();
+  const { movements, loading: loadingMovements, refetch: refetchMovements } = useMovements();
+  
+  // useRef para mantener referencias estables
+  const refetchMovementsRef = useRef(refetchMovements);
+  const refetchGoalsRef = useRef(refetchGoals);
+  
+  useEffect(() => {
+    refetchMovementsRef.current = refetchMovements;
+    refetchGoalsRef.current = refetchGoals;
+  }, [refetchMovements, refetchGoals]);
 
   useEffect(() => {
     const loadUserData = async () => {
       try {
         const userDataStr = await AsyncStorage.getItem('userData');
+        const savedImage = await profileService.getImageLocally();
+        
         if (userDataStr) {
           const userData = JSON.parse(userDataStr);
           setUserName(userData.fullName || userData.username || 'Usuario');
+        }
+        
+        if (savedImage) {
+          setProfileImage(savedImage);
         }
       } catch (error) {
         console.error('Error loading user data:', error);
@@ -28,6 +46,31 @@ export const HomePage = ({ navigation }) => {
     };
     loadUserData();
   }, []);
+
+  // Recargar todos los datos cuando se vuelve a la pantalla
+  useFocusEffect(
+    useCallback(() => {
+      console.log('🔄 HomePage focused - Refreshing data...');
+      const refreshData = async () => {
+        try {
+          // Recargar imagen de perfil específica del usuario
+          const savedImage = await profileService.getImageLocally();
+          setProfileImage(savedImage);
+          
+          // Refrescar datos financieros usando refs
+          if (refetchMovementsRef.current) {
+            refetchMovementsRef.current();
+          }
+          if (refetchGoalsRef.current) {
+            refetchGoalsRef.current();
+          }
+        } catch (error) {
+          console.error('Error refreshing data:', error);
+        }
+      };
+      refreshData();
+    }, []) // Array vacío - solo ejecutar cuando la pantalla gana foco
+  );
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -51,6 +94,15 @@ export const HomePage = ({ navigation }) => {
   // Calcular progreso de metas
   const firstGoal = goals[0];
   const goalProgress = firstGoal ? (firstGoal.montoActual / firstGoal.montoObjetivo) * 100 : 0;
+
+  // Logs para debug
+  console.log('🏠 HomePage - Loading states:', { 
+    loadingSummary, 
+    loadingGoals, 
+    loadingMovements,
+    movementsCount: movements.length,
+    goalsCount: goals.length
+  });
 
   if (loadingSummary || loadingGoals || loadingMovements) {
     return (
@@ -85,13 +137,20 @@ export const HomePage = ({ navigation }) => {
             {/* Header */}
             <View style={styles.header}>
               <View style={styles.headerLeft}>
-                <View style={styles.avatar}>
-                  <Svg width="40" height="40" viewBox="0 0 40 40">
-                    <Circle cx="20" cy="20" r="20" fill="#FFDF88" />
-                    <Circle cx="20" cy="16" r="8" fill="#2D1B4E" />
-                    <Path d="M8 32 Q8 22 20 22 Q32 22 32 32" fill="#2D1B4E" />
-                  </Svg>
-                </View>
+                <TouchableOpacity 
+                  style={styles.avatar}
+                  onPress={() => navigation.navigate('Settings')}
+                >
+                  {profileImage ? (
+                    <Image source={{ uri: profileImage }} style={styles.avatarImage} />
+                  ) : (
+                    <Svg width="40" height="40" viewBox="0 0 40 40">
+                      <Circle cx="20" cy="20" r="20" fill="#FFDF88" />
+                      <Circle cx="20" cy="16" r="8" fill="#2D1B4E" />
+                      <Path d="M8 32 Q8 22 20 22 Q32 22 32 32" fill="#2D1B4E" />
+                    </Svg>
+                  )}
+                </TouchableOpacity>
                 <View>
                   <Text style={styles.greeting}>¡{getGreeting()}!</Text>
                   <Text style={styles.subtitle}>Estado de hoy</Text>
@@ -114,18 +173,13 @@ export const HomePage = ({ navigation }) => {
               />
             </View>
 
-            {/* Balance Card Principal - Rosa/Morado */}
+            {/* Balance Card Principal - Fondo Negro con Borde Púrpura */}
             <View style={styles.mainCard}>
-              <LinearGradient
-                colors={['#EEC5F5', '#E0B3EE', '#D4A5E5']}
-                style={styles.cardGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
+              <View style={styles.cardGradient}>
                 <View style={styles.cardHeader}>
                   <View style={styles.cardIcon}>
                     <Svg width="24" height="24" viewBox="0 0 24 24">
-                      <Path d="M12 2L2 7V17L12 22L22 17V7L12 2Z" fill="#2D1B4E" />
+                      <Path d="M12 2L2 7V17L12 22L22 17V7L12 2Z" fill="#8B5CF6" />
                     </Svg>
                   </View>
                   <Text style={styles.cardLabel}>Balance Total</Text>
@@ -139,26 +193,23 @@ export const HomePage = ({ navigation }) => {
                       key={index}
                       style={[
                         styles.chartBar,
-                        { height: `${height * 100}%`, backgroundColor: index === 3 ? '#A68FCA' : '#E0B3EE' }
+                        { height: `${height * 100}%`, backgroundColor: index === 3 ? '#8B5CF6' : 'rgba(139, 92, 246, 0.3)' }
                       ]}
                     />
                   ))}
                 </View>
-              </LinearGradient>
+              </View>
             </View>
 
             {/* Tarjetas Ingresos y Gastos */}
             <View style={styles.cardRow}>
-              {/* Card Ingresos - Amarillo */}
+              {/* Card Ingresos - Fondo Negro con Borde Verde */}
               <View style={styles.smallCard}>
-                <LinearGradient
-                  colors={['#FFDF88', '#FFD670']}
-                  style={styles.smallCardGradient}
-                >
-                  <View style={[styles.dashedBorder, styles.dashedBorderYellow]} />
+                <View style={styles.smallCardGradient}>
+                  <View style={[styles.dashedBorder, styles.dashedBorderGreen]} />
                   <View style={styles.smallCardHeader}>
                     <Svg width="20" height="20" viewBox="0 0 24 24">
-                      <Path d="M7 14L12 9L17 14" stroke="#2D1B4E" strokeWidth="2" fill="none" />
+                      <Path d="M7 14L12 9L17 14" stroke="#10B981" strokeWidth="2" fill="none" />
                     </Svg>
                     <Text style={styles.smallCardLabel}>Ingresos</Text>
                   </View>
@@ -166,21 +217,18 @@ export const HomePage = ({ navigation }) => {
                   
                   {/* Curva decorativa */}
                   <Svg width="100%" height="60" style={styles.curveSvg}>
-                    <Path d="M0 40 Q50 20 100 40 T200 40" stroke="#2D1B4E" strokeWidth="2" fill="none" />
+                    <Path d="M0 40 Q50 20 100 40 T200 40" stroke="rgba(16, 185, 129, 0.4)" strokeWidth="2" fill="none" />
                   </Svg>
-                </LinearGradient>
+                </View>
               </View>
 
-              {/* Card Gastos - Azul */}
+              {/* Card Gastos - Fondo Negro con Borde Rojo */}
               <View style={styles.smallCard}>
-                <LinearGradient
-                  colors={['#BCE4F5', '#A5DCEF']}
-                  style={styles.smallCardGradient}
-                >
-                  <View style={[styles.dashedBorder, styles.dashedBorderBlue]} />
+                <View style={styles.smallCardGradient}>
+                  <View style={[styles.dashedBorder, styles.dashedBorderRed]} />
                   <View style={styles.smallCardHeader}>
                     <Svg width="20" height="20" viewBox="0 0 24 24">
-                      <Path d="M17 10L12 15L7 10" stroke="#2D1B4E" strokeWidth="2" fill="none" />
+                      <Path d="M17 10L12 15L7 10" stroke="#EF4444" strokeWidth="2" fill="none" />
                     </Svg>
                     <Text style={styles.smallCardLabel}>Gastos</Text>
                   </View>
@@ -188,9 +236,9 @@ export const HomePage = ({ navigation }) => {
                   
                   {/* Curva decorativa */}
                   <Svg width="100%" height="60" style={styles.curveSvg}>
-                    <Path d="M0 20 Q50 40 100 20 T200 20" stroke="#2D1B4E" strokeWidth="2" fill="none" />
+                    <Path d="M0 20 Q50 40 100 20 T200 20" stroke="rgba(239, 68, 68, 0.4)" strokeWidth="2" fill="none" />
                   </Svg>
-                </LinearGradient>
+                </View>
               </View>
             </View>
 
@@ -198,12 +246,12 @@ export const HomePage = ({ navigation }) => {
             {firstGoal && (
               <View style={styles.goalsSection}>
                 <Text style={styles.sectionTitle}>Metas Financieras</Text>
-                <View style={styles.goalCard}>
+                <TouchableOpacity style={styles.goalCard} onPress={() => navigation.navigate('Goals')}>
                   <View style={styles.goalInfo}>
                     <View style={styles.goalTextRow}>
                       <Svg width="20" height="20" viewBox="0 0 24 24">
-                        <Circle cx="12" cy="12" r="10" stroke="#FFDF88" strokeWidth="2" fill="none" />
-                        <Path d="M12 6V12L16 16" stroke="#FFDF88" strokeWidth="2" fill="none" />
+                        <Circle cx="12" cy="12" r="10" stroke="#8B5CF6" strokeWidth="2" fill="none" />
+                        <Path d="M12 6V12L16 16" stroke="#8B5CF6" strokeWidth="2" fill="none" />
                       </Svg>
                       <Text style={styles.goalLabel}>{firstGoal.nombre}</Text>
                     </View>
@@ -214,9 +262,9 @@ export const HomePage = ({ navigation }) => {
                   {/* Gráfico circular de progreso */}
                   <View style={styles.progressCircle}>
                     <Svg width="120" height="120" viewBox="0 0 120 120">
-                      <Circle cx="60" cy="60" r="50" stroke="#A5DCEF" strokeWidth="12" fill="none" />
+                      <Circle cx="60" cy="60" r="50" stroke="rgba(255, 255, 255, 0.2)" strokeWidth="12" fill="none" />
                       <Circle
-                        cx="60" cy="60" r="50" stroke="#FFDF88" strokeWidth="12" fill="none"
+                        cx="60" cy="60" r="50" stroke="#8B5CF6" strokeWidth="12" fill="none"
                         strokeDasharray={`${(goalProgress / 100) * 314} 314`}
                         strokeLinecap="round" transform="rotate(-90 60 60)"
                       />
@@ -225,7 +273,7 @@ export const HomePage = ({ navigation }) => {
                       <Text style={styles.progressPercentage}>{Math.round(goalProgress)}%</Text>
                     </View>
                   </View>
-                </View>
+                </TouchableOpacity>
               </View>
             )}
 
@@ -236,7 +284,7 @@ export const HomePage = ({ navigation }) => {
                 <View key={movement.id || index} style={styles.transactionItem}>
                   <View style={styles.transactionIcon}>
                     <Svg width="16" height="16" viewBox="0 0 24 24">
-                      <Circle cx="12" cy="12" r="10" fill={movement.tipoMovimiento === 'INCOME' ? '#FFDF88' : '#E0B3EE'} />
+                      <Circle cx="12" cy="12" r="10" fill={movement.tipoMovimiento === 'INCOME' ? '#10B981' : '#EF4444'} />
                     </Svg>
                   </View>
                   <View style={styles.transactionInfo}>
@@ -271,48 +319,89 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatar: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#FFDF88', justifyContent: 'center', alignItems: 'center' },
+  avatarImage: { width: 50, height: 50, borderRadius: 25, borderWidth: 2, borderColor: '#FFDF88' },
   greeting: { fontSize: 20, fontWeight: '700', color: '#FFFFFF' },
   subtitle: { fontSize: 13, color: '#B8B8B8', marginTop: 2 },
   notificationButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255, 255, 255, 0.15)', justifyContent: 'center', alignItems: 'center' },
   overviewContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20, position: 'relative' },
   overviewTitle: { fontSize: 32, fontWeight: '800', color: '#FFFFFF' },
   cupheadsImage: { width: 200, height: 160, position: 'absolute', right: -10, bottom: -50, zIndex: 10 },
-  mainCard: { borderRadius: 24, marginBottom: 16, overflow: 'hidden', elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3.84 },
+  mainCard: { 
+    borderRadius: 24, 
+    marginBottom: 16, 
+    overflow: 'hidden', 
+    elevation: 4, 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 2 }, 
+    shadowOpacity: 0.25, 
+    shadowRadius: 3.84,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(139, 92, 246, 0.6)'
+  },
   cardGradient: { padding: 20, minHeight: 160 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  cardIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255, 255, 255, 0.3)', justifyContent: 'center', alignItems: 'center', marginRight: 10 },
-  cardLabel: { fontSize: 15, color: '#2D1B4E', fontWeight: '600' },
-  mainAmount: { fontSize: 36, fontWeight: '800', color: '#2D1B4E', marginBottom: 16 },
+  cardIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(139, 92, 246, 0.2)', justifyContent: 'center', alignItems: 'center', marginRight: 10 },
+  cardLabel: { fontSize: 15, color: '#FFFFFF', fontWeight: '700', letterSpacing: 0.5 },
+  mainAmount: { fontSize: 36, fontWeight: '800', color: '#FFFFFF', marginBottom: 16 },
   miniChart: { flexDirection: 'row', alignItems: 'flex-end', height: 40, gap: 4 },
   chartBar: { flex: 1, borderRadius: 4, minHeight: 12 },
   cardRow: { flexDirection: 'row', gap: 12, marginBottom: 24 },
-  smallCard: { flex: 1, borderRadius: 20, overflow: 'hidden', elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 2.84 },
+  smallCard: { 
+    flex: 1, 
+    borderRadius: 20, 
+    overflow: 'hidden', 
+    elevation: 3, 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 2 }, 
+    shadowOpacity: 0.2, 
+    shadowRadius: 2.84,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)'
+  },
   smallCardGradient: { padding: 16, minHeight: 180, position: 'relative' },
   dashedBorder: { position: 'absolute', top: 8, left: 8, right: 8, bottom: 8, borderRadius: 16, borderWidth: 2, borderStyle: 'dashed' },
-  dashedBorderYellow: { borderColor: '#2D1B4E' },
-  dashedBorderBlue: { borderColor: '#2D1B4E' },
+  dashedBorderGreen: { borderColor: 'rgba(16, 185, 129, 0.6)' },
+  dashedBorderRed: { borderColor: 'rgba(239, 68, 68, 0.6)' },
   smallCardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 6 },
-  smallCardLabel: { fontSize: 13, color: '#2D1B4E', fontWeight: '600' },
-  smallAmount: { fontSize: 18, fontWeight: '800', color: '#2D1B4E', marginBottom: 8 },
+  smallCardLabel: { fontSize: 13, color: '#FFFFFF', fontWeight: '700', letterSpacing: 0.5 },
+  smallAmount: { fontSize: 18, fontWeight: '800', color: '#FFFFFF', marginBottom: 8 },
   curveSvg: { position: 'absolute', bottom: 8, left: 0 },
   goalsSection: { marginBottom: 24 },
   sectionTitle: { fontSize: 24, fontWeight: '700', color: '#FFFFFF', marginBottom: 16 },
-  goalCard: { backgroundColor: 'rgba(45, 27, 78, 0.8)', borderRadius: 20, padding: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  goalCard: { 
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', 
+    borderRadius: 20, 
+    padding: 20, 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: 'rgba(139, 92, 246, 0.5)'
+  },
   goalInfo: { flex: 1 },
   goalTextRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   goalLabel: { fontSize: 15, color: '#FFFFFF', fontWeight: '600' },
-  goalAmount: { fontSize: 24, fontWeight: '700', color: '#FFDF88', marginBottom: 4 },
+  goalAmount: { fontSize: 24, fontWeight: '700', color: '#8B5CF6', marginBottom: 4 },
   goalTarget: { fontSize: 13, color: '#B8B8B8' },
   progressCircle: { position: 'relative', width: 120, height: 120, justifyContent: 'center', alignItems: 'center' },
   progressText: { position: 'absolute', justifyContent: 'center', alignItems: 'center' },
   progressPercentage: { fontSize: 28, fontWeight: '800', color: '#FFFFFF' },
   transactionsSection: { marginBottom: 24 },
-  transactionItem: { backgroundColor: 'rgba(45, 27, 78, 0.6)', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  transactionItem: { 
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', 
+    borderRadius: 16, 
+    padding: 16, 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    marginBottom: 12,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.15)'
+  },
   transactionIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255, 255, 255, 0.1)', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   transactionInfo: { flex: 1 },
   transactionDescription: { fontSize: 15, fontWeight: '600', color: '#FFFFFF', marginBottom: 4 },
   transactionDate: { fontSize: 12, color: '#B8B8B8' },
   transactionAmount: { fontSize: 16, fontWeight: '700' },
-  incomeAmount: { color: '#FFDF88' },
-  expenseAmount: { color: '#E0B3EE' },
+  incomeAmount: { color: '#10B981' },
+  expenseAmount: { color: '#EF4444' },
 });

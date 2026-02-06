@@ -3,15 +3,15 @@
 /**
  * Formatea un número como moneda
  * @param {number} amount - Cantidad a formatear
- * @param {string} currency - Código de moneda (default: 'USD')
+ * @param {string} currency - Código de moneda (default: 'COP')
  * @returns {string} - Cantidad formateada
  */
-export const formatCurrency = (amount, currency = 'USD') => {
-  return new Intl.NumberFormat('es-MX', {
+export const formatCurrency = (amount, currency = 'COP') => {
+  return new Intl.NumberFormat('es-CO', {
     style: 'currency',
     currency: currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(amount);
 };
 

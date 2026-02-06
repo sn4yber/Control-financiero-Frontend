@@ -11,9 +11,12 @@ export const movementService = {
   },
 
   getAll: async (filters = {}) => {
+    console.log('🔍 Fetching movements from API...');
     const response = await apiClient.get('/movimientos', {
       params: filters
     });
+    console.log('✅ API Response:', response.data?.length || 0, 'movements');
+    console.log('📦 Sample movement:', response.data?.[0]);
     return response.data;
   }
 };

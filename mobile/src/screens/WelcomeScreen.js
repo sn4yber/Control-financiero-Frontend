@@ -38,7 +38,7 @@ export const WelcomeScreen = ({ navigation }) => {
         {/* Imagen de la mascota */}
         <View style={styles.imageContainer}>
           <Image 
-            source={require('../../assets/mascota-welcome.png')}
+            source={require('../../assets/joker.png')}
             style={styles.mascotImage}
             resizeMode="contain"
           />
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
     width: width * 0.8,
     height: width * 0.8,
     borderRadius: (width * 0.8) / 2,
-    backgroundColor: '#4A5FD9',
+    backgroundColor: '#00000000',
     top: height * 0.35,
     left: width * 0.1,
     opacity: 0.9,

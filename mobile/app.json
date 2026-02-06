@@ -14,10 +14,17 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.snayber.controlfinanciero",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#1A1A1A"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
     },
     "web": {}
   }

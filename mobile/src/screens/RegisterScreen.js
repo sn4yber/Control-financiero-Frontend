@@ -62,10 +62,18 @@ export const RegisterScreen = ({ navigation }) => {
     setLoading(true);
     try {
       await authService.register(email, fullName, password);
-      Alert.alert('Éxito', 'Registro exitoso. Bienvenido!');
-      // Navegar a la pantalla principal
-      // navigation.replace('Home');
+      Alert.alert(
+        'Éxito', 
+        'Registro exitoso. ¡Bienvenido!',
+        [
+          {
+            text: 'Continuar',
+            onPress: () => navigation.replace('Main')
+          }
+        ]
+      );
     } catch (error) {
+      console.error('Register error:', error);
       Alert.alert(
         'Error',
         error.message || 'No se pudo completar el registro. Inténtalo de nuevo.'

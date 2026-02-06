@@ -6,23 +6,27 @@ export const useGoals = (estado) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const fetchGoals = async () => {
-      try {
-        setLoading(true);
-        const data = await goalService.getAll(estado);
-        setGoals(data);
-        setError(null);
-      } catch (err) {
-        setError(err.message);
-        console.error('Error fetching goals:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchGoals = async () => {
+    try {
+      console.log('🎯 Fetching goals...');
+      setLoading(true);
+      const data = await goalService.getAll(estado);
+      console.log('✅ Goals fetched:', data.length);
+      setGoals(data);
+      setError(null);
+    } catch (err) {
+      console.error('❌ Error fetching goals:', err);
+      setError(err.message);
+      setGoals([]); // Asegurar que goals sea un array vacío en error
+    } finally {
+      setLoading(false);
+      console.log('🏁 Goals loading finished');
+    }
+  };
 
+  useEffect(() => {
     fetchGoals();
   }, [estado]);
 
-  return { goals, loading, error };
+  return { goals, loading, error, refetch: fetchGoals };
 };

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { movementService } from '../services/movementService';
 
 export const useMovements = (filters = {}) => {
@@ -6,23 +6,27 @@ export const useMovements = (filters = {}) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const fetchMovements = async () => {
-      try {
-        setLoading(true);
-        const data = await movementService.getAll(filters);
-        setMovements(data);
-        setError(null);
-      } catch (err) {
-        setError(err.message);
-        console.error('Error fetching movements:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchMovements();
+  const fetchMovements = useCallback(async () => {
+    try {
+      console.log('📥 Fetching movements...');
+      setLoading(true);
+      const data = await movementService.getAll(filters);
+      console.log('✅ Movements fetched:', data.length);
+      setMovements(data);
+      setError(null);
+    } catch (err) {
+      console.error('❌ Error fetching movements:', err);
+      setError(err.message);
+      setMovements([]); // Asegurar que movements sea un array vacío en error
+    } finally {
+      setLoading(false);
+      console.log('🏁 Movements loading finished');
+    }
   }, [JSON.stringify(filters)]);
 
-  return { movements, loading, error };
+  useEffect(() => {
+    fetchMovements();
+  }, [fetchMovements]);
+
+  return { movements, loading, error, refetch: fetchMovements };
 };

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, StyleSheet, Text, ImageBackground, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert, Animated, Image } from 'react-native';
+import { View, StyleSheet, Text, ImageBackground, FlatList, TouchableOpacity, TextInput, ActivityIndicator, Alert, Animated, Image } from 'react-native';
 import { BlurView } from 'expo-blur';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { useMovements } from '../features/movements/hooks/useMovements';
@@ -7,14 +7,11 @@ import { useDeleteMovement } from '../features/movements/hooks/useDeleteMovement
 import { CreateTransactionModal } from '../features/movements/components/CreateTransactionModal';
 import { Swipeable } from 'react-native-gesture-handler';
 
-const ITEMS_PER_PAGE = 3;
-
 export const TransactionsPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState(undefined);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState('EXPENSE');
-  const [currentPage, setCurrentPage] = useState(1);
 
   const { movements, loading, error, refetch } = useMovements({ tipo: filterType });
   const { deleteMovement } = useDeleteMovement();
@@ -29,14 +26,6 @@ export const TransactionsPage = () => {
       m.monto.toString().includes(lowerQuery)
     );
   }, [movements, searchQuery]);
-
-  const paginatedMovements = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
-    return filteredMovements.slice(startIndex, endIndex);
-  }, [filteredMovements, currentPage]);
-
-  const totalPages = Math.ceil(filteredMovements.length / ITEMS_PER_PAGE);
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('es-CO', {
@@ -132,11 +121,11 @@ export const TransactionsPage = () => {
         blurRadius={8}
       >
         <BlurView intensity={40} tint="dark" style={styles.blurOverlay}>
-          <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <View style={styles.contentContainer}>
             {/* Header */}
             <View style={styles.header}>
               <Text style={styles.title}>Movimientos</Text>
-              <Text style={styles.subtitle}>aqui podras gestionar tus movimientos financieros</Text>
+              <Text style={styles.subtitle}>gestiona tus movimientos financieros</Text>
             </View>
 
             {/* Imagen de Elder Kettle - circular */}
@@ -224,108 +213,62 @@ export const TransactionsPage = () => {
               </TouchableOpacity>
             </View>
 
-            {/* Movements List con Swipe */}
-            <View style={styles.movementsList}>
-              {paginatedMovements.length === 0 ? (
+            {/* FlatList con scroll infinito - SIN PAGINACIÓN */}
+            <FlatList
+              data={filteredMovements}
+              keyExtractor={(item) => item.id.toString()}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.flatListContent}
+              ListEmptyComponent={() => (
                 <View style={styles.emptyState}>
                   <Text style={styles.emptyText}>No hay movimientos</Text>
                   <Text style={styles.emptySubtext}>Agrega tu primer registro arriba</Text>
                 </View>
-              ) : (
-                paginatedMovements.map((movement) => (
-                  <Swipeable
-                    key={movement.id}
-                    renderRightActions={(progress, dragX) =>
-                      renderRightActions(progress, dragX, movement.id)
-                    }
-                  >
-                    <View style={styles.movementCard}>
-                      <View style={[
-                        styles.movementIcon,
-                        { backgroundColor: movement.tipoMovimiento === 'INCOME' ? '#4CAF50' : movement.tipoMovimiento === 'SAVINGS' ? '#2196F3' : '#F44336' }
-                      ]}>
-                        <Svg width="20" height="20" viewBox="0 0 24 24">
-                          <Circle cx="12" cy="12" r="10" fill="#FFFFFF" />
-                        </Svg>
-                      </View>
-
-                      <View style={styles.movementInfo}>
-                        <Text style={styles.movementDescription}>{movement.descripcion}</Text>
-                        <View style={styles.movementMeta}>
-                          <Text style={styles.movementDate}>{formatDate(movement.fechaMovimiento)}</Text>
-                          {movement.categoriaNombre && (
-                            <View style={[styles.categoryBadge, { backgroundColor: 'rgba(244, 67, 54, 0.2)' }]}>
-                              <Text style={[styles.categoryBadgeText, { color: '#F44336' }]}>{movement.categoriaNombre}</Text>
-                            </View>
-                          )}
-                          {movement.fuenteIngresoNombre && (
-                            <View style={[styles.categoryBadge, { backgroundColor: 'rgba(76, 175, 80, 0.2)' }]}>
-                              <Text style={[styles.categoryBadgeText, { color: '#4CAF50' }]}>{movement.fuenteIngresoNombre}</Text>
-                            </View>
-                          )}
-                        </View>
-                      </View>
-
-                      <Text style={[
-                        styles.movementAmount,
-                        { color: movement.tipoMovimiento === 'INCOME' ? '#4CAF50' : movement.tipoMovimiento === 'SAVINGS' ? '#2196F3' : '#F44336' }
-                      ]}>
-                        {movement.tipoMovimiento === 'INCOME' ? '+' : '-'}{formatCurrency(movement.monto)}
-                      </Text>
-                    </View>
-                  </Swipeable>
-                ))
               )}
-            </View>
-
-            {/* Paginador */}
-            {totalPages > 1 && (
-              <View style={styles.pagination}>
-                <TouchableOpacity
-                  style={[styles.pageButton, currentPage === 1 && styles.pageButtonDisabled]}
-                  onPress={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                >
-                  <Text style={styles.pageButtonText}>←</Text>
-                </TouchableOpacity>
-                
-                {[...Array(totalPages)].map((_, index) => {
-                  const pageNum = index + 1;
-                  if (
-                    pageNum === 1 ||
-                    pageNum === totalPages ||
-                    (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
-                  ) {
-                    return (
-                      <TouchableOpacity
-                        key={pageNum}
-                        style={[styles.pageNumber, currentPage === pageNum && styles.pageNumberActive]}
-                        onPress={() => setCurrentPage(pageNum)}
-                      >
-                        <Text style={[styles.pageNumberText, currentPage === pageNum && styles.pageNumberTextActive]}>
-                          {pageNum}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  } else if (
-                    (pageNum === currentPage - 2 && currentPage > 3) ||
-                    (pageNum === currentPage + 2 && currentPage < totalPages - 2)
-                  ) {
-                    return <Text key={pageNum} style={styles.pageDots}>...</Text>;
+              renderItem={({ item: movement }) => (
+                <Swipeable
+                  renderRightActions={(progress, dragX) =>
+                    renderRightActions(progress, dragX, movement.id)
                   }
-                  return null;
-                })}
-                
-                <TouchableOpacity
-                  style={[styles.pageButton, currentPage === totalPages && styles.pageButtonDisabled]}
-                  onPress={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
                 >
-                  <Text style={styles.pageButtonText}>→</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </ScrollView>
+                  <View style={styles.movementCard}>
+                    <View style={[
+                      styles.movementIcon,
+                      { backgroundColor: movement.tipoMovimiento === 'INCOME' ? '#4CAF50' : movement.tipoMovimiento === 'SAVINGS' ? '#2196F3' : '#F44336' }
+                    ]}>
+                      <Svg width="20" height="20" viewBox="0 0 24 24">
+                        <Circle cx="12" cy="12" r="10" fill="#FFFFFF" />
+                      </Svg>
+                    </View>
+
+                    <View style={styles.movementInfo}>
+                      <Text style={styles.movementDescription}>{movement.descripcion}</Text>
+                      <View style={styles.movementMeta}>
+                        <Text style={styles.movementDate}>{formatDate(movement.fechaMovimiento)}</Text>
+                        {movement.categoriaNombre && (
+                          <View style={[styles.categoryBadge, { backgroundColor: 'rgba(244, 67, 54, 0.2)' }]}>
+                            <Text style={[styles.categoryBadgeText, { color: '#F44336' }]}>{movement.categoriaNombre}</Text>
+                          </View>
+                        )}
+                        {movement.fuenteIngresoNombre && (
+                          <View style={[styles.categoryBadge, { backgroundColor: 'rgba(76, 175, 80, 0.2)' }]}>
+                            <Text style={[styles.categoryBadgeText, { color: '#4CAF50' }]}>{movement.fuenteIngresoNombre}</Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+
+                    <Text style={[
+                      styles.movementAmount,
+                      { color: movement.tipoMovimiento === 'INCOME' ? '#4CAF50' : movement.tipoMovimiento === 'SAVINGS' ? '#2196F3' : '#F44336' }
+                    ]}>
+                      {movement.tipoMovimiento === 'INCOME' ? '+' : '-'}{formatCurrency(movement.monto)}
+                    </Text>
+                  </View>
+                </Swipeable>
+              )}
+            />
+          </View>
         </BlurView>
       </ImageBackground>
 
@@ -346,118 +289,91 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000000' },
   backgroundImage: { flex: 1, width: '100%', height: '100%' },
   blurOverlay: { flex: 1, backgroundColor: 'transparent' },
-  scrollContent: { flex: 1, paddingTop: 60, paddingHorizontal: 20 },
+  contentContainer: { flex: 1, paddingTop: 60, paddingHorizontal: 20 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { color: '#FFFFFF', fontSize: 16, marginTop: 16, fontWeight: '500' },
-  header: { marginBottom: 20 },
+  header: { marginBottom: 16 },
   title: { fontSize: 32, fontWeight: '800', color: '#FFFFFF' },
   subtitle: { fontSize: 14, color: '#4CAF50', marginTop: 4, fontWeight: '600' },
-  elderKettleContainer: { alignItems: 'center', marginBottom: 20 },
-  elderKettleImage: { width: 120, height: 120, borderRadius: 60, borderWidth: 4, borderColor: '#FFDF88' },
-  quickActions: { flexDirection: 'row', gap: 12, marginBottom: 20 },
+  elderKettleContainer: { alignItems: 'center', marginBottom: 16 },
+  elderKettleImage: { width: 100, height: 100, borderRadius: 50, borderWidth: 3, borderColor: '#FFDF88' },
+  quickActions: { flexDirection: 'row', gap: 10, marginBottom: 16 },
   actionButton: { 
     flex: 1, 
-    borderRadius: 20, 
-    padding: 16, 
-    alignItems: 'center', 
-    gap: 8, 
-    borderWidth: 3, 
-    borderColor: '#2D1B4E' 
-  },
-  actionButtonText: { 
-    fontSize: 13, 
-    fontWeight: '900', 
-    color: '#FFFFFF', 
-    textTransform: 'uppercase' 
-  },
-  searchContainer: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    backgroundColor: 'rgba(45, 27, 78, 0.6)', 
     borderRadius: 16, 
-    paddingHorizontal: 16, 
-    marginBottom: 16 
+    padding: 14, 
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', 
+    borderWidth: 1.5, 
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6
   },
-  searchIcon: { marginRight: 8 },
-  searchInput: { flex: 1, paddingVertical: 14, fontSize: 15, color: '#FFFFFF' },
-  filterTabs: { flexDirection: 'row', gap: 8, marginBottom: 20 },
-  filterTab: { 
-    flex: 1, 
-    paddingVertical: 10, 
-    borderRadius: 12, 
-    backgroundColor: 'rgba(45, 27, 78, 0.6)', 
-    alignItems: 'center', 
-    borderWidth: 2, 
-    borderColor: 'transparent' 
+  actionButtonText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 16,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
   },
-  filterTabActive: { backgroundColor: '#FFDF88', borderColor: '#2D1B4E' },
-  filterTabText: { fontSize: 13, fontWeight: '700', color: '#FFFFFF' },
-  filterTabTextActive: { color: '#2D1B4E', fontWeight: '900' },
-  movementsList: { gap: 12 },
-  movementCard: { 
-    backgroundColor: 'rgba(45, 27, 78, 0.8)', 
-    borderRadius: 16, 
-    padding: 16, 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    gap: 12 
+  searchIcon: { marginRight: 10 },
+  searchInput: { flex: 1, color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
+  filterTabs: { flexDirection: 'row', gap: 8, marginBottom: 16 },
+  filterTab: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
   },
-  movementIcon: { 
-    width: 44, 
-    height: 44, 
-    borderRadius: 22, 
-    justifyContent: 'center', 
-    alignItems: 'center' 
+  filterTabActive: {
+    backgroundColor: '#4CAF50',
+    borderColor: '#4CAF50',
   },
-  movementInfo: { flex: 1 },
-  movementDescription: { fontSize: 15, fontWeight: '600', color: '#FFFFFF', marginBottom: 4 },
-  movementMeta: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  movementDate: { fontSize: 12, color: '#B8B8B8' },
-  categoryBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  categoryBadgeText: { fontSize: 11, fontWeight: '700' },
-  movementAmount: { fontSize: 16, fontWeight: '900' },
-  deleteAction: { 
-    backgroundColor: '#F44336', 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    width: 80, 
-    borderRadius: 16 
-  },
+  filterTabText: { fontSize: 13, fontWeight: '700', color: '#BBB' },
+  filterTabTextActive: { color: '#FFFFFF' },
+  flatListContent: { paddingBottom: 20 },
   emptyState: { paddingVertical: 60, alignItems: 'center' },
   emptyText: { fontSize: 18, fontWeight: '700', color: '#FFFFFF', marginBottom: 8 },
-  emptySubtext: { fontSize: 14, color: '#888888' },
-  pagination: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    gap: 8, 
-    marginTop: 20, 
-    paddingHorizontal: 16 
+  emptySubtext: { fontSize: 14, color: '#888' },
+  movementCard: {
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
   },
-  pageButton: { 
-    width: 40, 
-    height: 40, 
-    borderRadius: 20, 
-    backgroundColor: 'rgba(255, 223, 136, 0.3)', 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    borderWidth: 2, 
-    borderColor: '#FFDF88' 
+  movementIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
   },
-  pageButtonDisabled: { opacity: 0.3 },
-  pageButtonText: { fontSize: 18, fontWeight: '900', color: '#FFDF88' },
-  pageNumber: { 
-    width: 36, 
-    height: 36, 
-    borderRadius: 18, 
-    backgroundColor: 'rgba(45, 27, 78, 0.6)', 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    borderWidth: 2, 
-    borderColor: 'transparent' 
+  movementInfo: { flex: 1 },
+  movementDescription: { fontSize: 15, fontWeight: '700', color: '#FFFFFF', marginBottom: 6 },
+  movementMeta: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
+  movementDate: { fontSize: 12, color: '#AAA', fontWeight: '600' },
+  categoryBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  categoryBadgeText: { fontSize: 11, fontWeight: '700' },
+  movementAmount: { fontSize: 16, fontWeight: '800', marginLeft: 8 },
+  deleteAction: {
+    backgroundColor: '#F44336',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 80,
+    height: '100%',
+    borderRadius: 16,
+    marginBottom: 12,
   },
-  pageNumberActive: { backgroundColor: '#FFDF88', borderColor: '#2D1B4E' },
-  pageNumberText: { fontSize: 14, fontWeight: '700', color: '#FFFFFF' },
-  pageNumberTextActive: { color: '#2D1B4E', fontWeight: '900' },
-  pageDots: { fontSize: 16, fontWeight: '700', color: '#888888', paddingHorizontal: 4 },
 });
