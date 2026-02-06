@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { View, StyleSheet, Text, ImageBackground, FlatList, TouchableOpacity, TextInput, ActivityIndicator, Alert, Animated, Image } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { useMovements } from '../features/movements/hooks/useMovements';
@@ -15,6 +16,13 @@ export const TransactionsPage = () => {
 
   const { movements, loading, error, refetch } = useMovements({ tipo: filterType });
   const { deleteMovement } = useDeleteMovement();
+
+  // Auto-refresh when page gains focus
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [])
+  );
 
   const filteredMovements = useMemo(() => {
     if (!searchQuery) return movements;
@@ -114,16 +122,16 @@ export const TransactionsPage = () => {
 
   return (
     <View style={styles.container}>
-      <ImageBackground
-        source={require('../../assets/fondo-moviemientos.jpg')}
-        style={styles.backgroundImage}
-        resizeMode="cover"
-        blurRadius={8}
-      >
-        <BlurView intensity={40} tint="dark" style={styles.blurOverlay}>
-          <View style={styles.contentContainer}>
-            {/* Header */}
-            <View style={styles.header}>
+        <ImageBackground
+          source={require('../../assets/fondo-moviemientos.jpg')}
+          style={styles.backgroundImage}
+          resizeMode="cover"
+          blurRadius={8}
+        >
+          <BlurView intensity={40} tint="dark" style={styles.blurOverlay}>
+            <View style={styles.contentContainer}>
+              {/* Header */}
+              <View style={styles.header}>
               <Text style={styles.title}>Movimientos</Text>
               <Text style={styles.subtitle}>gestiona tus movimientos financieros</Text>
             </View>
@@ -286,6 +294,7 @@ export const TransactionsPage = () => {
 };
 
 const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: '#000000' },
   container: { flex: 1, backgroundColor: '#000000' },
   backgroundImage: { flex: 1, width: '100%', height: '100%' },
   blurOverlay: { flex: 1, backgroundColor: 'transparent' },

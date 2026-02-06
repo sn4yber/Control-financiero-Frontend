@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { View, StyleSheet, Text, ImageBackground, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { LineChart, ProgressChart } from 'react-native-chart-kit';
@@ -16,9 +17,18 @@ const screenWidth = Dimensions.get('window').width;
 
 export const ReportsPage = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date());
-  const { stats, loading: statsLoading } = useReports(selectedMonth);
-  const { movements, loading: movementsLoading } = useMovements();
-  const { goals, loading: goalsLoading } = useGoals();
+  const { stats, loading: statsLoading, refetch: refetchStats } = useReports(selectedMonth);
+  const { movements, loading: movementsLoading, refetch: refetchMovements } = useMovements();
+  const { goals, loading: goalsLoading, refetch: refetchGoals } = useGoals();
+  
+  // Auto-refresh when page gains focus
+  useFocusEffect(
+    useCallback(() => {
+      refetchStats();
+      refetchMovements();
+      refetchGoals();
+    }, [])
+  );
   
   // Filter movements by selected month for charts
   const monthFilteredMovements = useMemo(() => {
@@ -60,12 +70,12 @@ export const ReportsPage = () => {
       style={styles.background}
       resizeMode="cover"
     >
-      <BlurView intensity={95} tint="dark" style={styles.blurContainer}>
-        <LinearGradient
-          colors={['rgba(179, 121, 223, 0.15)', 'rgba(54, 0, 96, 0.25)', 'rgba(0, 0, 0, 0.85)']}
-          style={styles.gradient}
-        >
-          <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <BlurView intensity={95} tint="dark" style={styles.blurContainer}>
+          <LinearGradient
+            colors={['rgba(179, 121, 223, 0.15)', 'rgba(54, 0, 96, 0.25)', 'rgba(0, 0, 0, 0.85)']}
+            style={styles.gradient}
+          >
+          <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
             {/* Header with Month Selector */}
             <View style={styles.header}>
               <Text style={styles.title}>Reportes Financieros</Text>

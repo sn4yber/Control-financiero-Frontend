@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, StyleSheet, Text, ImageBackground, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Animated, Image } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from '@react-navigation/native';
 import Svg, { Circle, Path, G } from 'react-native-svg';
 import { useGoals } from '../features/goals/hooks/useGoals';
 import { useDeleteGoal } from '../features/goals/hooks/useDeleteGoal';
@@ -51,6 +52,13 @@ export const GoalsPage = () => {
 
   const { goals, loading, error, refetch } = useGoals('ACTIVE');
   const { deleteGoal, loading: deleting } = useDeleteGoal();
+
+  // Refrescar cuando la pantalla gana foco
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [])
+  );
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('es-CO', {
@@ -240,7 +248,7 @@ export const GoalsPage = () => {
       style={styles.container}
       imageStyle={styles.backgroundImage}
     >
-      <View style={styles.overlay} />
+        <View style={styles.overlay} />
 
       {/* Header */}
       <View style={styles.header}>
@@ -256,7 +264,7 @@ export const GoalsPage = () => {
       {/* Content */}
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 }]}
         showsVerticalScrollIndicator={false}
       >
         {loading ? (
@@ -307,6 +315,10 @@ export const GoalsPage = () => {
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
   container: {
     flex: 1,
     backgroundColor: '#000000',

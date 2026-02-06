@@ -1,9 +1,10 @@
 {
   "expo": {
-    "name": "Control Financiero",
+    "name": "Metafy",
     "slug": "control-financiero-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/icono-app.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -16,7 +17,9 @@
     "android": {
       "package": "com.snayber.controlfinanciero",
       "versionCode": 1,
+      "icon": "./assets/icono-app.png",
       "adaptiveIcon": {
+        "foregroundImage": "./assets/icono-app.png",
         "backgroundColor": "#1A1A1A"
       },
       "edgeToEdgeEnabled": true,
@@ -26,6 +29,11 @@
         "WRITE_EXTERNAL_STORAGE"
       ]
     },
-    "web": {}
+    "web": {},
+    "extra": {
+      "eas": {
+        "projectId": "a88ec392-207a-474b-b0b3-f7b9286bf495"
+      }
+    }
   }
 }

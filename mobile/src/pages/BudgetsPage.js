@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, StyleSheet, Text, ImageBackground, ScrollView, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path, Circle } from 'react-native-svg';
@@ -25,6 +26,13 @@ export const BudgetsPage = () => {
   const { financialContext } = useFinancialContext();
   const [simulationAmount, setSimulationAmount] = useState('');
 
+  // Auto-refresh when page gains focus
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [])
+  );
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('es-CO', {
       style: 'currency',
@@ -49,16 +57,17 @@ export const BudgetsPage = () => {
   const suggestedSavings = baseAmount * (savingsPercentage / 100);
 
   return (
-    <ImageBackground
-      source={require('../../assets/diablo.jpg')}
-      style={styles.container}
-      imageStyle={styles.backgroundImage}
-    >
-      <View style={styles.overlay} />
+   
+      <ImageBackground
+        source={require('../../assets/diablo.jpg')}
+        style={styles.container}
+        imageStyle={styles.backgroundImage}
+      >
+        <View style={styles.overlay} />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
+        {/* Header */}
+        <View style={styles.header}>
+          <View>
           <Text style={styles.headerTitle}>Calculadora de Presupuesto</Text>
           <Text style={styles.headerSubtitle}>Planifica con la regla 50/30/20</Text>
         </View>
@@ -66,7 +75,7 @@ export const BudgetsPage = () => {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 }]}
         showsVerticalScrollIndicator={false}
       >
         {loading ? (
@@ -206,6 +215,10 @@ export const BudgetsPage = () => {
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
   container: {
     flex: 1,
     backgroundColor: '#000000',

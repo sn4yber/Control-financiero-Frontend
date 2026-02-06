@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { View, StyleSheet, Text, ImageBackground, ScrollView, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFinancialSummary } from '../features/financial-context/hooks/useFinancialSummary';
@@ -126,19 +125,19 @@ export const HomePage = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <ImageBackground
-        source={require('../../assets/fondo-home.jpg')}
-        style={styles.backgroundImage}
-        resizeMode="cover"
-        blurRadius={8}
-      >
-        <BlurView intensity={40} tint="dark" style={styles.blurOverlay}>
-          <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
-            {/* Header */}
-            <View style={styles.header}>
-              <View style={styles.headerLeft}>
-                <TouchableOpacity 
-                  style={styles.avatar}
+        <ImageBackground
+          source={require('../../assets/fondo-home.jpg')}
+          style={styles.backgroundImage}
+          resizeMode="cover"
+          blurRadius={8}
+        >
+          <BlurView intensity={40} tint="dark" style={styles.blurOverlay}>
+            <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
+              {/* Header */}
+              <View style={styles.header}>
+                <View style={styles.headerLeft}>
+                  <TouchableOpacity 
+                    style={styles.avatar}
                   onPress={() => navigation.navigate('Settings')}
                 >
                   {profileImage ? (
@@ -301,7 +300,7 @@ export const HomePage = ({ navigation }) => {
               ))}
             </View>
 
-            <View style={{ height: 40 }} />
+            <View style={{ height: 100 }} />
           </ScrollView>
         </BlurView>
       </ImageBackground>
@@ -310,6 +309,7 @@ export const HomePage = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: '#000000' },
   container: { flex: 1, backgroundColor: '#000000' },
   backgroundImage: { flex: 1, width: '100%', height: '100%' },
   blurOverlay: { flex: 1, backgroundColor: 'transparent' },

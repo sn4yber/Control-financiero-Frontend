@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, Text, ImageBackground, ScrollView, TouchableOpacity, TextInput, Image, Alert } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -162,11 +162,11 @@ export const SettingsPage = ({ navigation }) => {
         style={styles.backgroundImage}
         resizeMode="cover"
         blurRadius={8}
-      >
-        <BlurView intensity={40} tint="dark" style={styles.blurOverlay}>
-          <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
-            {/* Header */}
-            <View style={styles.header}>
+        >
+          <BlurView intensity={40} tint="dark" style={styles.blurOverlay}>
+          <ScrollView style={styles.scrollContent} contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+              {/* Header */}
+              <View style={styles.header}>
               <Text style={styles.title}>Configuración</Text>
               <Text style={styles.subtitle}>Personaliza tu perfil</Text>
             </View>
@@ -313,6 +313,7 @@ export const SettingsPage = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: '#000000' },
   container: { flex: 1, backgroundColor: '#000000' },
   backgroundImage: { flex: 1, width: '100%', height: '100%' },
   blurOverlay: { flex: 1, backgroundColor: 'transparent' },
